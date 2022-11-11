@@ -8,10 +8,11 @@ The goals are
 - Be as simple as possible.
 - Be easy to parse.
 - Be easy to read.
+- Be frictionless
 
 Check out example.c for examples.
 
-The goal is to express hierarchachal data structures in the most simple way possible.
+The goal is to express hierarchical data structures in the most simple way possible.
 Nodes can have children. Those child nodes can be nodes with a value (like a number) or 
 more nodes. e.g.
 ```
