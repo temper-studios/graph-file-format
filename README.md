@@ -1,4 +1,6 @@
 
+<br>
+
 <div align = center>
 
 # Graph File Format
@@ -8,13 +10,13 @@ A text format used to save & load hierarchical data from
 
 <br>
 
-***Credit for the design goes to my Dad.***
-
-<br>
-<br>
-
 [![Button Example]][Example]  
 [![Button Format]][Format]
+
+<br>
+<br>
+
+***Credit for the design goes to my Dad.***
 
 <br>
 <br>
@@ -22,10 +24,42 @@ A text format used to save & load hierarchical data from
 ## Goals
 
 <kbd> <br> Simple as Possible <br> </kbd>  
-<kbd> <br> Easy to Read / Parse <br> </kbd>  
-<kbd> <br> Frictionless <br> </kbd>
+<kbd> <br> Frictionless <br> </kbd>  
+<kbd> <br> Easy to Read / Parse <br> </kbd>
+
+
+<br>
+<br>
+
+## Format Example
+
+*A small example of how you can structure data in graph files.*
 
 </div>
+
+<br>
+
+```graph
+/* An example of the .graph file format */
+
+Model {
+    
+    Id { "Basic Component" }
+    
+    Shape {
+        0  0  50 10  70 40
+       84 31   6 12   1 23
+    }
+    
+    Density { 0.4 }
+    
+    Position {
+        X { -4 }
+        Y {  3 }
+        z { 10 }
+    }
+}
+```
 
 <br>
 
