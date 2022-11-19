@@ -1,31 +1,42 @@
-# graph-file-format
-The .graph file format is a text file format used to save and load hierarchical data.
-It was designed primarily for games to save information about game state which is usually
-hierarchical.
-Credit for the design goes to my Dad
 
-The goals are
-- Be as simple as possible.
-- Be easy to parse.
-- Be easy to read.
-- Be frictionless
+<div align = center>
 
-Check out example.c for examples.
+# Graph File Format
 
-The goal is to express hierarchical data structures in the most simple way possible.
-Nodes can have children. Those child nodes can be nodes with a value (like a number) or 
-more nodes. e.g.
-```
-node { 1.0 } // node with a value child
-```
-```
-node { child { 2.0 } } // node with a child node
-```
-```
-node { 1 2 3.0 "hello" child { -1.0 } } // node with a list of data including a child node
-```
-The delimiter between nodes is a space. Nodes scope are ended with a closing brace
-```
-node { a b } // a and b are two seperate nodes.
-next { a } // next is seperate from node
-```
+A text format used to save & load hierarchical data from  
+`.graph`  files, primarily designed for saving game states.
+
+<br>
+
+***Credit for the design goes to my Dad.***
+
+<br>
+<br>
+
+[![Button Example]][Example]  
+[![Button Format]][Format]
+
+<br>
+<br>
+
+## Goals
+
+<kbd> <br> Simple as Possible <br> </kbd>  
+<kbd> <br> Easy to Read / Parse <br> </kbd>  
+<kbd> <br> Frictionless <br> </kbd>
+
+</div>
+
+<br>
+
+
+<!----------------------------------------------------------------------------->
+
+[Example]: example.c
+[Format]: Documentation/Format.md
+
+
+<!---------------------------------[ Buttons ]--------------------------------->
+
+[Button Example]: https://img.shields.io/badge/Example-00B388?style=for-the-badge&logoColor=white&logo=VisualStudioCode
+[Button Format]: https://img.shields.io/badge/Format-008FC7?style=for-the-badge&logoColor=white&logo=BookStack
