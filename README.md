@@ -11,7 +11,8 @@ A text format used to save & load hierarchical data from
 <br>
 
 [![Button Example]][Example]  
-[![Button Format]][Format]
+[![Button Format]][Format]  
+[![Button Video]][Video]
 
 <br>
 <br>
@@ -68,9 +69,11 @@ Model {
 
 [Example]: example.c
 [Format]: Documentation/Format.md
+[Video]: https://www.youtube.com/watch?v=wG0gW6viPJs
 
 
 <!---------------------------------[ Buttons ]--------------------------------->
 
 [Button Example]: https://img.shields.io/badge/Example-00B388?style=for-the-badge&logoColor=white&logo=VisualStudioCode
 [Button Format]: https://img.shields.io/badge/Format-008FC7?style=for-the-badge&logoColor=white&logo=BookStack
+[Button Video]: https://img.shields.io/badge/Introduction-CA4245?style=for-the-badge&logoColor=white&logo=YouTube
