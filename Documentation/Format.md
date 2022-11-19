@@ -1,25 +1,111 @@
 
 # Format
 
+*Explanation of the structure with examples.*
 
 <br>
 
+## Comments
 
+The graph format uses `/**/` multi-line comments.
 
+```graph
+/*
+    A comment stretched over multiple lines
+*/
+```
 
-The goal is to express hierarchical data structures in the most simple way possible.
-Nodes can have children. Those child nodes can be nodes with a value (like a number) or 
-more nodes. e.g.
+<br>
+<br>
+
+## Nodes
+
+Nodes group one of more items together under a name.
+
+```graph
+<Node Name> { <Node Content> }
 ```
-node { 1.0 } // node with a value child
+
+<br>
+
+### Name
+
+-   Has to start with  `a - Z`
+-   Can contain  `a - Z` ,  `0 - 9`  &  `_`
+
+<br>
+
+### Content
+
+A nodes content - it's items - can either be direct  
+values like numbers & strings or other nodes.
+
+<br>
+
+### Delimiters
+
+To separate multiple items from one another,  
+either use at least one **space** or **comma**.
+
+```graph
+NodeWithCommas { <ItemA> , <ItemB> }
+NodeWithSpaces { <ItemA> <ItemB> }
 ```
+
+<br>
+<br>
+
+## Numbers
+
+Integers, as well as floats can be saved as is.
+
+```graph
+IntegerA { 10 }
+IntegerB { -1 }
 ```
-node { child { 2.0 } } // node with a child node
+
+```graph
+FloatA { 0.43 }
+FloatB { -0.1 }
 ```
+
+<br>
+<br>
+
+## Strings
+
+Strings simply have to be wrapped in double quotes.
+
+```graph
+A_String { "Hello World" }
 ```
-node { 1 2 3.0 "hello" child { -1.0 } } // node with a list of data including a child node
+
+<br>
+
+### Escaped Characters
+
+Proceed as you usually would and prepend a backslash.
+
+```graph
+String_With_Escapes { "Hello \"World\"" }
 ```
-The delimiter between nodes is a space. Nodes scope are ended with a closing brace
+
+<br>
+<br>
+
+## Mixed Structure
+
+Is is also possible to mix direct values with other nodes.
+
+```graph
+Object {
+    
+    100 ,
+    200 ,
+    
+    Data { 1 , 0 , 2 }
+    
+}
 ```
-node { a b } // a and b are two seperate nodes.
-next { a } // next is seperate from node
+
+<br>
