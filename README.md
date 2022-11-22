@@ -1,31 +1,79 @@
-# graph-file-format
-The .graph file format is a text file format used to save and load hierarchical data.
-It was designed primarily for games to save information about game state which is usually
-hierarchical.
-Credit for the design goes to my Dad
 
-The goals are
-- Be as simple as possible.
-- Be easy to parse.
-- Be easy to read.
-- Be frictionless
+<br>
 
-Check out example.c for examples.
+<div align = center>
 
-The goal is to express hierarchical data structures in the most simple way possible.
-Nodes can have children. Those child nodes can be nodes with a value (like a number) or 
-more nodes. e.g.
+# Graph File Format
+
+A text format used to save & load hierarchical data from  
+`.graph`  files, primarily designed for saving game states.
+
+<br>
+
+[![Button Example]][Example]  
+[![Button Format]][Format]  
+[![Button Video]][Video]
+
+<br>
+<br>
+
+***Credit for the design goes to my Dad.***
+
+<br>
+<br>
+
+## Goals
+
+<kbd> <br> Simple as Possible <br> </kbd>  
+<kbd> <br> Frictionless <br> </kbd>  
+<kbd> <br> Easy to Read / Parse <br> </kbd>
+
+
+<br>
+<br>
+
+## Format Example
+
+*A small example of how you can structure data in graph files.*
+
+</div>
+
+<br>
+
+```graph
+/* An example of the .graph file format */
+
+Model {
+    
+    Id { "Basic Component" }
+    
+    Shape {
+        0  0  50 10  70 40
+       84 31   6 12   1 23
+    }
+    
+    Density { 0.4 }
+    
+    Position {
+        X { -4 }
+        Y {  3 }
+        z { 10 }
+    }
+}
 ```
-node { 1.0 } // node with a value child
-```
-```
-node { child { 2.0 } } // node with a child node
-```
-```
-node { 1 2 3.0 "hello" child { -1.0 } } // node with a list of data including a child node
-```
-The delimiter between nodes is a space. Nodes scope are ended with a closing brace
-```
-node { a b } // a and b are two seperate nodes.
-next { a } // next is seperate from node
-```
+
+<br>
+
+
+<!----------------------------------------------------------------------------->
+
+[Example]: example.c
+[Format]: Documentation/Format.md
+[Video]: https://www.youtube.com/watch?v=wG0gW6viPJs
+
+
+<!---------------------------------[ Buttons ]--------------------------------->
+
+[Button Example]: https://img.shields.io/badge/Example-00B388?style=for-the-badge&logoColor=white&logo=VisualStudioCode
+[Button Format]: https://img.shields.io/badge/Format-008FC7?style=for-the-badge&logoColor=white&logo=BookStack
+[Button Video]: https://img.shields.io/badge/Introduction-CA4245?style=for-the-badge&logoColor=white&logo=YouTube
