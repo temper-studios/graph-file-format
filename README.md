@@ -29,3 +29,23 @@ The delimiter between nodes is a space. Nodes scope are ended with a closing bra
 node { a b } // a and b are two seperate nodes.
 next { a } // next is seperate from node
 ```
+You can do matrices 
+```
+matrix { 1 0 0 
+         0 1 0 
+         0 0 1 }
+```
+You can do comments 
+```
+myFloat { 1.0 } // this is a number
+```
+You can do nested data structures 
+```
+Parent {
+  Child {
+      Child {
+          "hello, world"
+       }
+   }  
+}
+```
