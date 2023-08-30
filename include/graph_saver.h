@@ -28,24 +28,38 @@ typedef struct graph_saver_node {
 	struct graph_saver_node *next;
 } graph_saver_node;
 
-void graph_saver_node_add_name(graph_error_context *ctx, graph_saver_node *node, graph_pool *pool, const char *name, graph_u64 nameLength);
-
 typedef struct graph_saver {
+	graph_error_context errorCtx;
 	graph_pool poolNode;
 	graph_pool poolString;
 	graph_saver_node root;
 } graph_saver;
 
-void graph_saver_init(graph_error_context *ctx, graph_saver *saver);
-void graph_saver_clear(graph_saver *saver);
-void graph_saver_deinit(graph_saver *saver);
+/* Must be called before doing anything with the saver object. When finished
+ * call graph_saver_finish */
+void graph_saver_start(graph_saver *saver, graph_error_context_callback callback);
+/* Resets the saver object so that it contains no data. */
+void graph_saver_reset(graph_saver *saver);
+/* Called when finished with the saver object. Deallocates data */
+void graph_saver_finish(graph_saver *saver);
+/* Returns true if the saver object threw an error */
+bool graph_saver_check_error(graph_saver *saver);
 
-graph_saver_node *graph_saver_add_node_with_len(graph_error_context *ctx, graph_saver *saver, graph_saver_node *parent, const char *name, graph_u64 nameLength);
-graph_saver_node *graph_saver_add_node(graph_error_context *ctx, graph_saver *saver, graph_saver_node *parent, const char *name);
-graph_saver_node *graph_saver_add_u64(graph_error_context *ctx, graph_saver *saver, graph_saver_node *parent, graph_u64 value);
-graph_saver_node *graph_saver_add_s64(graph_error_context *ctx, graph_saver *saver, graph_saver_node *parent, graph_s64 value);
-graph_saver_node *graph_saver_add_double(graph_error_context *ctx, graph_saver *saver, graph_saver_node *parent, double value);
-graph_saver_node *graph_saver_add_string(graph_error_context *ctx, graph_saver *saver, graph_saver_node *parent, const char *value, graph_u64 length);
-graph_saver_node *graph_saver_add_string_null_terminated(graph_error_context *ctx, graph_saver *saver, graph_saver_node *parent, const char *value);
-void graph_saver_write_to_file(graph_error_context *ctx, graph_saver *saver, FILE *file, graph_saver_node *parent, const int depth);
-void graph_saver_save(graph_error_context *ctx, graph_saver *saver, const char *filename);
+/* Adds a node to the saver object. The string span is used as the name. It is copied. Returns
+ * this node. If there is an error, this will return NULL. */
+graph_saver_node *graph_save_node_span(graph_saver *saver, graph_saver_node *parent, const char *name, graph_u64 nameLength);
+/* Adds a node to the saver object. The string must be null terminated. This string is the
+ * name of the node. Returns this node. If there is an error this will return NULL. */
+graph_saver_node *graph_save_node(graph_saver *saver, graph_saver_node *parent, const char *name);
+/* Adds an unsigned 64 bit integer to the saver object. Returns the node that stores this value  * If there is an error it will return NULL. */
+graph_saver_node *graph_save_u64(graph_saver *saver, graph_saver_node *parent, graph_u64 value);
+/* Adds an signed 64 bit integer to the saver object. Returns the node that stores this value  * If there is an error it will return NULL. */
+graph_saver_node *graph_save_s64(graph_saver *saver, graph_saver_node *parent, graph_s64 value);
+/* Adds a double to the saver object. Returns the node that stores this value  * If there is an error it will return NULL. */
+graph_saver_node *graph_save_double(graph_saver *saver, graph_saver_node *parent, double value);
+/* Adds a string span to the saver object. Returns the node that stores this value  * If there is an error it will return NULL. */
+graph_saver_node *graph_save_string_span(graph_saver *saver, graph_saver_node *parent, const char *value, graph_u64 length);
+/* Adds a null terminated string to the saver object. Returns the node that stores this value  * If there is an error it will return NULL. */
+graph_saver_node *graph_save_string_null_terminated(graph_saver *saver, graph_saver_node *parent, const char *value);
+/* Saves the contents of the saver object to a file. Overwrites the file if it exists already */
+void graph_save_to_file(graph_saver *saver, const char *filename);

@@ -23,7 +23,7 @@ void graph_error_context_default_callback(graph_error_context *ctx, void *data, 
 	}
 
 	if (token) {
-		printf("[%llu] ", token->lineno);
+		printf("[%lu] ", token->lineno);
 		printf("%s: ", format);
 		putc('\"', stdout);
 		graph_token_print(token);

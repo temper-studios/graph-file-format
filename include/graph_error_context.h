@@ -22,6 +22,9 @@ typedef struct graph_error_context {
 
 void graph_error_context_default_exit_callback(graph_error_context *ctx, void *data, struct graph_token *token, const char *format, ...);
 void graph_error_context_default_callback(graph_error_context *ctx, void *data, struct graph_token *token, const char *format, ...);
+/* Initialises the error context. This must be called before initialising the error context. It does not need to be
+ * matched with a call to a deinit function. The callback function defines the kind of behaviour that occurs when an error is encountered.
+ * this can range from printing to std out, to exiting the application. */
 void graph_error_context_init(graph_error_context *ctx, graph_error_context_callback callback);
 void graph_error_context_clear(graph_error_context *ctx);
 bool graph_error_context_check(graph_error_context *ctx);
