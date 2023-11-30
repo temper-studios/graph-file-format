@@ -7,7 +7,7 @@ Check out example.c for examples of usage. Check out the .graph files to see wha
 The graph file format is a plain text, hierarchical, data file format that is trivial to read and easy to parse.
 For instance, the parser is only tens of lines long! It's simpler than JSON and as a bonus, can have comments.
 
-If you want to simply serialised and deserialise data this is could be an option for you.
+If you want to simply serialise and deserialise data this could be an option for you.
 
 It was designed primarily for games to save information about game state which is usually hierarchical.
 Credit for the design goes to my Dad
