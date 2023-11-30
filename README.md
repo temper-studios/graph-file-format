@@ -23,19 +23,19 @@ The grammar is very simple and free form. Everything is a node and a node can be
 
 Nodes that have child nodes are called composite nodes. Below is a composite node called "node" with a single child node which is a value "1.0".
 ```
-node { 1.0 } // node with a value child
+node { 1.0 } /* node with a value child */
 ```
 Below is a composite node that has a child which is a composite node.
 ```
-node { child { 2.0 } } // node with a child node
+node { child { 2.0 } } /* node with a child node */
 ```
 ```
-node { 1 2 3.0 "hello" child { -1.0 } } // node with a list of data including a child node
+node { 1 2 3.0 "hello" child { -1.0 } } /* node with a list of data including a child node */
 ```
 The delimiter between nodes can be a comma or a space. Nodes scope are ended with a closing brace
 ```
-node { a, b } // a and b are two seperate nodes.
-next { a } // next is seperate from node
+node { a, b } /* a and b are two seperate nodes. */
+next { a } /* next is seperate from node */
 ```
 Arrays are just value nodes that are next to each other.
 ```
