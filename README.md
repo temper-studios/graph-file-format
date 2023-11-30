@@ -57,3 +57,15 @@ Parent {
    }  
 }
 ```
+Features:
+- Saving and loading a C struct.
+- Saving and loading anything really.
+- Saving graphs or linked data structures.
+- Can use a custom allocator so (admittedly not battle tested yet) can be used in an embedded environment.
+- Send it over a network... or don't!
+- Is fast. Potentially. Not measured it, but it doesn't do much and its written in C. Obvious optimisation can be done.
+- Just looks pretty nice dunnit?
+- It's not JSON.
+- It's not XML.
+- C is the first class citizen so can port anywhere! To any language! (but someone else should do that not me)
+- You should use a binary format. But this is the next best thing.
