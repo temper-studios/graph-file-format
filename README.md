@@ -69,3 +69,7 @@ Features:
 - It's not XML.
 - C is the first class citizen so can port anywhere! To any language! (but someone else should do that not me)
 - You should use a binary format. But this is the next best thing.
+
+Where is it used?
+- Blinded by Fear: https://store.steampowered.com/app/2102680/Blinded_by_Fear/
+- That's it. But if you do use it I'd love to know so I can list it here!
