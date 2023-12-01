@@ -1,6 +1,7 @@
+#define GF_IMPLEMENTATION
 #include "graph_file_format.h"
 
-int main() {
+int main(void) {
 
 	struct InnerStruct {
 		double a;
@@ -69,8 +70,9 @@ int main() {
 		fclose(file);
 	}
 
-	struct MyStruct myStruct;
+
 	{
+		struct MyStruct myStruct;
 		gf_Loader loader;
 		int result = 0;
 
@@ -152,29 +154,64 @@ int main() {
 		gf_Unload(&loader);
 
 	}
+	
+	//{
+	//	gf_Loader loader;
+	//	char src[1] = "/";
+	//	gf_LoadFromBuffer(&loader, src, 1, 0);
+	//	gf_Unload(&loader);
+	//}
+
+	{
+		gf_Loader loader;
+		static char src[1 << 20];
+		memset(src, '-', sizeof(src) - 1);
+		int result = gf_LoadFromBuffer(&loader, src, sizeof(src) - 1, 0);
+		if (result) {
+			puts("test failed");
+			return 0;
+		}
+		gf_Unload(&loader);
+	}
 
 	{
 		const char *str = "a b c d e ";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (!result) {
+			puts("test failed");
+			return 0;
+		}
 		gf_Unload(&loader);
 	}
 	{
 		const char *str = "a /*";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (result) {
+			puts("test failed");
+			return 0;
+		}
 		gf_Unload(&loader);
 	}
 	{
 		const char *str = "a \"";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (result) {
+			puts("test failed");
+			return 0;
+		}
 		gf_Unload(&loader);
 	}
 	{
 		const char *str = "1, 1.0";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (!result) {
+			puts("test failed");
+			return 0;
+		}
 		gf_Unload(&loader);
 	}
 
@@ -189,6 +226,10 @@ int main() {
 
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (!result) {
+			puts("test failed");
+			return 0;
+		}
 		gf_Unload(&loader);
 	}
 
@@ -199,6 +240,31 @@ int main() {
 			"Hello\n";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (!result) {
+			puts("test failed");
+			return 0;
+		}
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "/* this is a comment */";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (!result) {
+			puts("test failed");
+			return 0;
+		}
+		gf_Unload(&loader);
+	}
+	{
+		// Should this fail? this is the question of the day.
+		const char *str = "3.0 { a }";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		if (!result) {
+			puts("test failed");
+			return 0;
+		}
 		gf_Unload(&loader);
 	}
 
