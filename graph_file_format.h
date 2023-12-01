@@ -7,6 +7,7 @@
 #include <math.h>
 #include <assert.h>
 #include <memory.h>
+#include <inttypes.h>
 
 //----------------------------------TYPEDEFS----------------------------------------\\
 
@@ -83,8 +84,8 @@ typedef struct gf_LogAllocateFreeFunctions {
 void gf_DefaultLog(gf_LogLevel level, int lineno, gf_Token *, const char *format, va_list vlist);
 void gf_Log(gf_LogFunctionPtr Log, gf_LogLevel level, int lineno, gf_Token *, const char *format, ...);
 
-#define GF_LOG(loaderOrSaver, level, format, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, NULL, format, __VA_ARGS__)
-#define GF_LOG_WITH_TOKEN(loaderOrSaver, level, token, format, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, token, format, __VA_ARGS__)
+#define GF_LOG(loaderOrSaver, level, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, NULL, __VA_ARGS__)
+#define GF_LOG_WITH_TOKEN(loaderOrSaver, level, token, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, token, __VA_ARGS__)
 
 //-----------------------------------------------------------------------------------\\
 
@@ -116,11 +117,24 @@ int  gf_SaveEndList(gf_Saver *saver, FILE *file);
 
 //------------------------------------LOADER-----------------------------------------\\
 
+typedef struct gf_Tokeniser {
+	const char *buffer;
+	gf_u64 index;
+	gf_u64 count;
+} gf_Tokeniser;
+
+void gf_InitTokeniser(gf_Tokeniser *tokeniser, const char *buffer, gf_u64 count);
+char gf_GetChar(gf_Tokeniser *tokeniser);
+void gf_IncrementIndex(gf_Tokeniser *tokeniser);
+const char *gf_Ptr(gf_Tokeniser *tokeniser);
+
 typedef struct gf_LoaderNode {
 	gf_Token *token;
 	struct gf_LoaderNode *parent;
 	struct gf_LoaderNode *next;
-	struct gf_LoaderNode *children;
+	struct gf_LoaderNode *prev;
+	struct gf_LoaderNode *childrenHead;
+	struct gf_LoaderNode *childrenTail;
 	struct gf_LoaderNode *nextAllocated;
 } gf_LoaderNode;
 
@@ -140,13 +154,14 @@ void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctio
 void gf_IncrementLastTokenLength(gf_Loader *loader);
 int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno);
 char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename);
+int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser);
 int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count);
 gf_Token *gf_ConsumeToken(gf_Loader *loader);
 gf_Token *gf_PeekToken(gf_Loader *loader);
 gf_LoaderNode *gf_AddNode(gf_Loader *loader, gf_Token *token);
 void gf_AddChild(gf_LoaderNode *parent, gf_LoaderNode *child);
 int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode);
-int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, gf_LogAllocateFreeFunctions *funcs);
+int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount);
 int gf_LoadFromBuffer(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, gf_LogAllocateFreeFunctions *funcs);
 int gf_LoadFromFile(gf_Loader *loader, const char *filename, gf_LogAllocateFreeFunctions *funcs);
 void gf_Unload(gf_Loader *loader);
@@ -175,6 +190,9 @@ int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u6
 
 
 //-----------------------------------------------------------------------------------\\
+
+// IMPLEMENTATION
+#ifdef GF_IMPLEMENTATION
 
 //-------------------------STRING CONVERSIONS---------------------------------------\\
 
@@ -329,7 +347,7 @@ int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value) {
 //-------------------------------------TOKENS----------------------------------------\\
 
 void gf_PrintToken(gf_Token *token) {
-	for (int i = 0; i < token->length; i++) {
+	for (gf_u64 i = 0; i < token->length; i++) {
 		printf("%c", token->start[i]);
 	}
 }
@@ -369,7 +387,7 @@ void gf_DefaultLog(gf_LogLevel level, int lineno, gf_Token *token, const char *f
 		printf("[\"");
 		gf_PrintToken(token);
 		printf("\"]");
-		printf("[lineno: %llu]", token->lineno);
+		printf("[lineno: %" PRIu64 "]", token->lineno);
 	}
 	printf(": ");
 	vprintf(format, vlist);
@@ -412,7 +430,7 @@ int gf_SaveVariableS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s
 	result = gf_PrintIndent(saver, file);
 	if (!result) { return 0; }
 
-	result = fprintf(file, "%s { %lld }\n", identifier, *value);
+	result = fprintf(file, "%s { %" PRIi64 " }\n", identifier, *value);
 	if (result < 0) {
 		GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveVariableS64", result);
 		return 0;
@@ -426,7 +444,7 @@ int gf_SaveVariableS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s
 	result = gf_PrintIndent(saver, file);
 	if (!result) { return 0; }
 
-	result = fprintf(file, "%s { %ld }\n", identifier, *value);
+	result = fprintf(file, "%s { %" PRIi32 " }\n", identifier, *value);
 	if (result < 0) {
 		GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveVariableS32", result);
 		return 0;
@@ -440,7 +458,7 @@ int gf_SaveVariableU32(gf_Saver *saver, FILE *file, const char *identifier, gf_u
 	result = gf_PrintIndent(saver, file);
 	if (!result) { return 0; }
 
-	result = fprintf(file, "%s { %lu }\n", identifier, *value);
+	result = fprintf(file, "%s { %" PRIu32 " }\n", identifier, *value);
 	if (result < 0) {
 		GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveVariableU32", result);
 		return 0;
@@ -455,7 +473,7 @@ int gf_SaveVariableU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u
 	result = gf_PrintIndent(saver, file);
 	if (!result) { return 0; }
 
-	result = fprintf(file, "%s { %llu }\n", identifier, *value);
+	result = fprintf(file, "%s { %" PRIu64 " }\n", identifier, *value);
 	if (result < 0) {
 		GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveVariableU64", result);
 		return 0;
@@ -563,13 +581,13 @@ int gf_SaveArrayU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 
 			GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayU64", result);
 			return 0;
 		}
-		result = fprintf(file, "%llu", value[0]);
+		result = fprintf(file, "%" PRIu64, value[0]);
 		if (result < 0) {
 			GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayU64", result);
 			return 0;
 		}
 		for (int i = 1; i < count; i++) {
-			result = fprintf(file, ", %llu", value[i]);
+			result = fprintf(file, ", %" PRIi64, value[i]);
 			if (result < 0) {
 				GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayU64", result);
 				return 0;
@@ -597,13 +615,13 @@ int gf_SaveArrayS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 
 			GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayI64", result);
 			return 0;
 		}
-		result = fprintf(file, "%lld", value[0]);
+		result = fprintf(file, "%" PRIi64, value[0]);
 		if (result < 0) {
 			GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayI64", result);
 			return 0;
 		}
 		for (int i = 1; i < count; i++) {
-			result = fprintf(file, ", %lld", value[i]);
+			result = fprintf(file, ", %" PRIi64, value[i]);
 			if (result < 0) {
 				GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayI64", result);
 				return 0;
@@ -632,13 +650,13 @@ int gf_SaveArrayS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 
 			GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayS32", result);
 			return 0;
 		}
-		result = fprintf(file, "%ld", value[0]);
+		result = fprintf(file, "%" PRIi32, value[0]);
 		if (result < 0) {
 			GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayS32", result);
 			return 0;
 		}
 		for (int i = 1; i < count; i++) {
-			result = fprintf(file, ", %ld", value[i]);
+			result = fprintf(file, ", %" PRIi32, value[i]);
 			if (result < 0) {
 				GF_LOG(saver, GF_LOG_ERROR, "fprintf failed with value [%d] in gf_SaveArrayS32", result);
 				return 0;
@@ -666,6 +684,8 @@ int gf_SaveStartList(gf_Saver *saver, FILE *file, const char *identifier) {
 		return 0;
 	}
 	saver->indent++;
+
+	return 1;
 }
 
 int gf_SaveEndList(gf_Saver *saver, FILE *file) {
@@ -740,6 +760,11 @@ void gf_IncrementLastTokenLength(gf_Loader *loader) {
 int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno) {
 	assert(loader->lastToken);
 
+	if (!start) {
+		GF_LOG(loader, GF_LOG_ERROR, "Expecting a token but at the end of the file/buffer");
+		return 0;
+	}
+
 	gf_Token *token = (gf_Token *)loader->Allocate(sizeof(gf_Token));
 	if (!token) {
 		GF_LOG(loader, GF_LOG_ERROR, "Out of memory in gf_AddToken");
@@ -778,7 +803,7 @@ char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *fil
 		return NULL;
 	}
 	fseek(file, 0, SEEK_END);
-	fileSize = ftell(file);
+	fileSize = (uint64_t)ftell(file);
 	fseek(file, 0, SEEK_SET);
 
 	char *buffer = (char *)loader->Allocate(fileSize + 1);
@@ -802,17 +827,41 @@ char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *fil
 	return buffer;
 }
 
-// The buffer doesn't have to be null terminated. But make sure the size is accurate
-int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count) {
+void gf_InitTokeniser(gf_Tokeniser *tokeniser, const char *buffer, gf_u64 count) {
+	tokeniser->buffer = buffer;
+	tokeniser->count = count;
+	tokeniser->index = 0;
+}
 
-	gf_u64 index = 0;
-	const char *str = buffer;
+char gf_GetChar(gf_Tokeniser *tokeniser) {
+	if (tokeniser->index >= tokeniser->count) {
+		return '\0';
+	}
+	return tokeniser->buffer[tokeniser->index];
+}
+
+void gf_IncrementIndex(gf_Tokeniser *tokeniser) {
+	if (tokeniser->index < tokeniser->count) {
+		tokeniser->index++;
+	}
+}
+
+const char *gf_Ptr(gf_Tokeniser *tokeniser) {
+	if (tokeniser->index < tokeniser->count) {
+		return &tokeniser->buffer[tokeniser->index];
+	}
+	return NULL;
+}
+
+int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
+
 	uint64_t lineno = 1;
 	int result = 0;
 
 	while (1) {
 
-		if (index >= count || str[index] == '\0') {
+		if (gf_GetChar(tokeniser) == '\0') {
+
 			result = gf_AddToken(loader, "<end token>", GF_TOKEN_TYPE_END_FILE, lineno);
 			if (!result) {
 				GF_LOG(loader, GF_LOG_ERROR, "Failed to add end file token");
@@ -820,99 +869,104 @@ int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count) {
 			}
 			break;
 		}
-		else if (str[index] == '{') {
-			result = gf_AddToken(loader, &str[index], GF_TOKEN_TYPE_VALUE_ASSIGN, lineno);
+		else if (gf_GetChar(tokeniser) == '{') {
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_VALUE_ASSIGN, lineno);
 			if (!result) {
 				GF_LOG(loader, GF_LOG_ERROR, "Failed to add value assign token");
 				return 0;
 			}
-			index++;
+			gf_IncrementIndex(tokeniser);
 		}
-		else if (str[index] == '}') {
-			result = gf_AddToken(loader, &str[index], GF_TOKEN_TYPE_CURLY_CLOSE, lineno);
+		else if (gf_GetChar(tokeniser) == '}') {
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_CURLY_CLOSE, lineno);
 			if (!result) {
 				GF_LOG(loader, GF_LOG_ERROR, "Failed to add curly close token");
 				return 0;
 			}
-			index++;
+			gf_IncrementIndex(tokeniser);
 		}
-		else if (str[index] == '/') {
-			index++;
-			if (str[index] == '*') {
+		else if (gf_GetChar(tokeniser) == '/') {
+
+			gf_IncrementIndex(tokeniser);
+
+			if (gf_GetChar(tokeniser) == '*') {
+
 				int nestedCommentDepth = 1;
-				index++;
+				gf_IncrementIndex(tokeniser);
+
 				while (nestedCommentDepth > 0) {
 
-					if (index >= count || str[index] == '\0') {
+					if (gf_GetChar(tokeniser) == '\0') {
 						GF_LOG(loader, GF_LOG_ERROR, "Comment does not end before the file ends");
 						return 0;
 					}
-					else if (str[index] == '/') {
-						index++;
-						if (str[index] == '*') {
+					else if (gf_GetChar(tokeniser) == '/') {
+
+						gf_IncrementIndex(tokeniser);
+						if (gf_GetChar(tokeniser) == '*') {
 							nestedCommentDepth++;
 						}
 					}
-					else if (str[index] == '*') {
-						index++;
-						if (str[index] == '/') {
+					else if (gf_GetChar(tokeniser) == '*') {
+						gf_IncrementIndex(tokeniser);
+						if (gf_GetChar(tokeniser) == '/') {
 							nestedCommentDepth--;
 						}
 					}
-					else if (str[index] == '\n') {
+					else if (gf_GetChar(tokeniser) == '\n') {
 						lineno++;
-						index++;
+						gf_IncrementIndex(tokeniser);
 					}
-					else if (str[index] == '\r') {
+					else if (gf_GetChar(tokeniser) == '\r') {
 						lineno++;
-						index++;
-						if (str[index] == '\n') {
-							index++;
+						gf_IncrementIndex(tokeniser);
+						if (gf_GetChar(tokeniser) == '\n') {
+							gf_IncrementIndex(tokeniser);
 						}
 					}
 					else {
-						index++;
+						gf_IncrementIndex(tokeniser);
 					}
 				}
 			}
 		}
-		else if (str[index] == ' ' || str[index] == ',' || str[index] == '\t') {
-			index++;
+		else if (gf_GetChar(tokeniser) == ' ' || gf_GetChar(tokeniser) == ',' || gf_GetChar(tokeniser) == '\t') {
+			gf_IncrementIndex(tokeniser);
 		}
-		else if (str[index] == '\n') {
+		else if (gf_GetChar(tokeniser) == '\n') {
 			lineno++;
-			index++;
+			gf_IncrementIndex(tokeniser);
 		}
-		else if (str[index] == '\r') {
+		else if (gf_GetChar(tokeniser) == '\r') {
 			lineno++;
-			index++;
-			if (str[index] == '\n') {
-				index++;
+			gf_IncrementIndex(tokeniser);
+			if (gf_GetChar(tokeniser) == '\n') {
+				gf_IncrementIndex(tokeniser);
 			}
 		}
-		else if (str[index] == '\"') {
+		else if (gf_GetChar(tokeniser) == '\"') {
 
-			index++;
+			gf_IncrementIndex(tokeniser);
 
-			result = gf_AddToken(loader, &str[index], GF_TOKEN_TYPE_STRING, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_STRING, lineno);
 			if (!result) {
 				GF_LOG(loader, GF_LOG_ERROR, "Failed to add string token");
 				return 0;
 			}
 
-			if (str[index] != '\"') {
+			if (gf_GetChar(tokeniser) != '\"') {
 				int lastCharPossibleEscapeChar = 0;
-				index++;
+				gf_IncrementIndex(tokeniser);
 				while (1) {
 
-					if (index >= count || str[index] == '\0') {
+					if (gf_GetChar(tokeniser) == '\0') {
 						GF_LOG(loader, GF_LOG_ERROR, "String does not end before the file ends");
 						return 0;
 					}
-					else if (str[index] == '\"' && !lastCharPossibleEscapeChar) {
+					else if (gf_GetChar(tokeniser) == '\"' && !lastCharPossibleEscapeChar) {
 						break;
 					}
-					else if (str[index] == '\\') {
+					else if (gf_GetChar(tokeniser) == '\\') {
 						lastCharPossibleEscapeChar = 1;
 					}
 					else {
@@ -920,64 +974,70 @@ int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count) {
 					}
 
 					gf_IncrementLastTokenLength(loader);
-					index++;
+					gf_IncrementIndex(tokeniser);
 				}
 			}
 
-			index++;
+			gf_IncrementIndex(tokeniser);
 		}
-		else if (isalpha(str[index])) {
+		else if (isalpha(gf_GetChar(tokeniser))) {
 
-			result = gf_AddToken(loader, &str[index], GF_TOKEN_TYPE_NAME, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_NAME, lineno);
 			if (!result) {
 				GF_LOG(loader, GF_LOG_ERROR, "Failed to add name token");
 				return 0;
 			}
-			index++;
+			gf_IncrementIndex(tokeniser);
 
-			while (index < count && (isalpha(str[index]) || isdigit(str[index]) || str[index] == '_')) {
+			while (isalpha(gf_GetChar(tokeniser)) || isdigit(gf_GetChar(tokeniser)) || gf_GetChar(tokeniser) == '_') {
 				gf_IncrementLastTokenLength(loader);
-				index++;
+				gf_IncrementIndex(tokeniser);
 			}
 		}
-		else if (isdigit(str[index]) || str[index] == '-' || str[index] == '+') {
+		else if (isdigit(gf_GetChar(tokeniser)) || gf_GetChar(tokeniser) == '-' || gf_GetChar(tokeniser) == '+') {
 
 			int hasFloatingPoint = 0;
+			int hasPlusOrMinus = gf_GetChar(tokeniser) == '-' || gf_GetChar(tokeniser) == '+';
 
-			result = gf_AddToken(loader, &str[index], GF_TOKEN_TYPE_FLOAT, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_FLOAT, lineno);
 			if (!result) {
 				GF_LOG(loader, GF_LOG_ERROR, "Failed to add float token");
 				return 0;
 			}
-			index++;
+			gf_IncrementIndex(tokeniser);
 
-			while (index < count && (isdigit(str[index]) || str[index] == '.')) {
-				if (str[index] == '.') {
+			while (isdigit(gf_GetChar(tokeniser)) || gf_GetChar(tokeniser) == '.') {
+				if (gf_GetChar(tokeniser) == '.') {
 
 					if (hasFloatingPoint == 0) {
 						hasFloatingPoint = 1;
 					}
 
 					gf_IncrementLastTokenLength(loader);
-					index++;
-					while (isdigit(str[index])) {
+					gf_IncrementIndex(tokeniser);
+					while (isdigit(gf_GetChar(tokeniser))) {
 						gf_IncrementLastTokenLength(loader);
-						index++;
+						gf_IncrementIndex(tokeniser);
 					}
 					break;
 				}
 				else {
 					gf_IncrementLastTokenLength(loader);
-					index++;
+					gf_IncrementIndex(tokeniser);
 				}
 			}
 
 			if (!hasFloatingPoint) {
 				loader->lastToken->type = GF_TOKEN_TYPE_INTEGER;
 			}
+			// Prevents just having a + or - as a valid number
+			if (hasPlusOrMinus && loader->lastToken->length == 1) {
+				GF_LOG(loader, GF_LOG_ERROR, "There is a + or - without a number");
+				return 0;
+			}
 		}
 		else {
-			GF_LOG(loader, GF_LOG_ERROR, "Unrecognised character %c", str[index]);
+			GF_LOG(loader, GF_LOG_ERROR, "Unrecognised character %c", gf_GetChar(tokeniser));
 			return 0;
 		}
 	}
@@ -985,6 +1045,14 @@ int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count) {
 	return 1;
 }
 
+// The buffer doesn't have to be null terminated. But make sure the size is accurate
+int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count) {
+
+	gf_Tokeniser tokeniser;
+	gf_InitTokeniser(&tokeniser, buffer, count);
+
+	return gf_TokeniseInternal(loader, &tokeniser);
+}
 
 gf_Token *gf_ConsumeToken(gf_Loader *loader) {
 	gf_Token *token = loader->curToken;
@@ -1014,21 +1082,26 @@ gf_LoaderNode *gf_AddNode(gf_Loader *loader, gf_Token *token) {
 	node->token = token;
 	node->parent = NULL;
 	node->next = NULL;
-	node->children = NULL;
+	node->prev = NULL;
+	node->childrenHead = NULL;
+	node->childrenTail = NULL;
 	node->nextAllocated = NULL;
 	return node;
 }
 
 void gf_AddChild(gf_LoaderNode *parent, gf_LoaderNode *child) {
 	if (parent == NULL) return;
-	if (parent->children == NULL) {
-		parent->children = child;
+	if (parent->childrenHead == NULL) {
+		parent->childrenHead = child;
+		parent->childrenTail = child;
+		child->next = NULL;
+		child->prev = NULL;
 	}
 	else {
-		// we can make these double linked lists to really improve performance here.
-		gf_LoaderNode *childNext = parent->children;
-		while (childNext->next != NULL) { childNext = childNext->next; }
-		childNext->next = child;
+		parent->childrenTail->next = child;
+		child->prev = parent->childrenTail;
+		child->next = NULL;
+		parent->childrenTail = child;
 	}
 	child->parent = parent;
 }
@@ -1097,7 +1170,7 @@ int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode) {
 }
 
 
-int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, gf_LogAllocateFreeFunctions *funcs) {
+int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount) {
 
 	int result = gf_Tokenise(loader, buffer, bufferCount);
 	if (!result) {
@@ -1123,7 +1196,7 @@ int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, g
 int gf_LoadFromBuffer(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, gf_LogAllocateFreeFunctions *funcs) {
 	gf_InitLoader(loader, funcs);
 
-	return gf_LoadInternal(loader, buffer, bufferCount, funcs);
+	return gf_LoadInternal(loader, buffer, bufferCount);
 }
 
 int gf_LoadFromFile(gf_Loader *loader, const char *filename, gf_LogAllocateFreeFunctions *funcs) {
@@ -1135,7 +1208,7 @@ int gf_LoadFromFile(gf_Loader *loader, const char *filename, gf_LogAllocateFreeF
 	}
 	gf_u64 bufferCount = gf_StringLength(buffer) + 1; // +1 for null terminator
 
-	return gf_LoadInternal(loader, buffer, bufferCount, funcs);
+	return gf_LoadInternal(loader, buffer, bufferCount);
 }
 
 
@@ -1270,6 +1343,8 @@ int gf_LoaderNodeToString(gf_Loader *loader, gf_LoaderNode *node, char *src, gf_
 	}
 	memcpy(src, node->token->start, node->token->length);
 	src[node->token->length] = '\0';
+
+	return 1;
 }
 
 
@@ -1293,7 +1368,6 @@ gf_LoaderNode *gf_GetNext(gf_Loader *loader, gf_LoaderNode *node) {
 	else {
 		return node->next;
 	}
-	return NULL;
 }
 
 gf_LoaderNode *gf_GetChild(gf_Loader *loader, gf_LoaderNode *node) {
@@ -1301,16 +1375,14 @@ gf_LoaderNode *gf_GetChild(gf_Loader *loader, gf_LoaderNode *node) {
 		GF_LOG(loader, GF_LOG_ERROR, "node is null");
 		return NULL;
 	}
-	else if (!node->children) {
+	else if (!node->childrenHead) {
 		GF_LOG_WITH_TOKEN(loader, GF_LOG_WARNING, node->token, "node's child is null");
 		return NULL;
 	}
 	else {
-		return node->children;
+		return node->childrenHead;
 	}
-	return NULL;
 }
-
 
 gf_TokenType gf_GetType(gf_Loader *loader, gf_LoaderNode *node) {
 	if (!node) {
@@ -1329,7 +1401,7 @@ gf_LoaderNode *gf_FindFirstChild(gf_Loader *loader, gf_LoaderNode *node, const c
 
 	gf_u64 len = gf_StringLength(str);
 
-	gf_LoaderNode *child = node->children;
+	gf_LoaderNode *child = node->childrenHead;
 	while (child) {
 		if (child->token->type == GF_TOKEN_TYPE_COMPOSITE_TYPE || child->token->type == GF_TOKEN_TYPE_NAME) {
 			if (gf_AreStringSpansEqual(child->token->start, child->token->length, str, len)) {
@@ -1338,6 +1410,8 @@ gf_LoaderNode *gf_FindFirstChild(gf_Loader *loader, gf_LoaderNode *node, const c
 		}
 		child = child->next;
 	}
+
+	return NULL;
 }
 
 gf_LoaderNode *gf_FindFirstNext(gf_Loader *loader, gf_LoaderNode *node, const char *str) {
@@ -1358,6 +1432,8 @@ gf_LoaderNode *gf_FindFirstNext(gf_Loader *loader, gf_LoaderNode *node, const ch
 		}
 		next = next->next;
 	}
+
+	return NULL;
 }
 
 int gf_LoadVariableU32(gf_Loader *loader, gf_LoaderNode *node, gf_u32 *value) {
@@ -1516,7 +1592,7 @@ int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u6
 		return 0;
 	}
 
-	int index = 0;
+	gf_u64 index = 0;
 	while (child && index < count) {
 		if (!gf_LoaderNodeToS32(loader, child, &value[index])) {
 			return 0;
@@ -1527,3 +1603,5 @@ int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u6
 
 	return 1;
 }
+
+#endif
