@@ -22,14 +22,87 @@ typedef double   gf_f64;
 
 //-------------------------STRING CONVERSIONS---------------------------------------\\
 
+/*
+Name:        int gf_AreStringSpansEqual(const char *a, gf_u64 alength, const char *b, gf_u64 blength);
+Description: Checks if *a and *b spanning strings are equal in value.
+Assumptions: - *a and *b are not NULL and they are NULL terminated strings.
+             - alength and blength are the string lengths of a and b respectively (they do not include the null terminating character).
+Returns:     Returns 1 if they are equal. 0 if they are not.
+*/
 int gf_AreStringSpansEqual(const char *a, gf_u64 alength, const char *b, gf_u64 blength);
+
+/*
+Name:        gf_u64 gf_StringLength(const char *str);
+Description: Computes the length of *str.
+Assumptions: - *str is not NULL and is NULL terminated.
+Returns:     The length of the string as a gf_u64.
+*/
 gf_u64 gf_StringLength(const char *str);
 
+/*
+Name:        int gf_StringSpanToU32(const char *start, uint64_t length, gf_u32 *value);
+Description: Converts a string that spans a certain length into an unsigned 32 bit integer. 
+             If the provided length is longer than the NULL terminated string then it will only parse
+             up to the null terminated character.
+Assumptions: - *start is not NULL and is NULL terminated. 
+             - *value is not NULL
+Returns:     Returns 1 if the conversion was successful. 0 if it was not successful.
+*/
 int gf_StringSpanToU32(const char *start, uint64_t length, gf_u32 *value);
+
+/*
+Name:        int gf_StringSpanToU64(const char *start, uint64_t length, gf_u64 *value);
+Description: Converts a string that spans a certain length into an unsigned 64 bit integer. 
+             If the provided length is longer than the NULL terminated string then it will only parse
+             up to the null terminated character.
+Assumptions: - *start is not NULL and is NULL terminated. 
+             - *value is not NULL
+Returns:     Returns 1 if the conversion was successful. 0 if it was not successful.
+*/
 int gf_StringSpanToU64(const char *start, uint64_t length, gf_u64 *value);
+
+/*
+Name:        int gf_StringSpanToS32(const char *start, uint64_t length, gf_s32 *value);
+Description: Converts a string that spans a certain length into an signed 32 bit integer. 
+             If the provided length is longer than the NULL terminated string then it will only parse
+             up to the null terminated character.
+Assumptions: - *start is not NULL and is NULL terminated. 
+             - *value is not NULL
+Returns:     Returns 1 if the conversion was successful. 0 if it was not successful.
+*/
 int gf_StringSpanToS32(const char *start, uint64_t length, gf_s32 *value);
+
+/*
+Name:        int gf_StringSpanToS64(const char *start, uint64_t length, gf_s64 *value);
+Description: Converts a string that spans a certain length into an signed 64 bit integer. 
+             If the provided length is longer than the NULL terminated string then it will only parse
+             up to the null terminated character.
+Assumptions: - *start is not NULL and is NULL terminated. 
+             - *value is not NULL
+Returns:     Returns 1 if the conversion was successful. 0 if it was not successful.
+*/
 int gf_StringSpanToS64(const char *start, uint64_t length, gf_s64 *value);
+
+/*
+Name:        int gf_StringSpanToF64(const char *start, uint64_t length, gf_f64 *value);
+Description: Converts a string that spans a certain length into an 64 bit floating point number. 
+             If the provided length is longer than the NULL terminated string then it will only parse
+             up to the null terminated character.
+Assumptions: - *start is not NULL and is NULL terminated. 
+             - *value is not NULL
+Returns:     Returns 1 if the conversion was successful. 0 if it was not successful.
+*/
 int gf_StringSpanToF64(const char *start, uint64_t length, gf_f64 *value);
+
+/*
+Name:        int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value);
+Description: Converts a string that spans a certain length into an 32 bit floating point number. 
+             If the provided length is longer than the NULL terminated string then it will only parse
+             up to the null terminated character.
+Assumptions: - *start is not NULL and is NULL terminated. 
+             - *value is not NULL
+Returns:     Returns 1 if the conversion was successful. 0 if it was not successful.
+*/
 int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value);
 
 //-----------------------------------------------------------------------------------\\
@@ -37,16 +110,16 @@ int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value);
 //-------------------------------------TOKENS----------------------------------------\\
 
 typedef enum gf_TokenType {
-	GF_TOKEN_TYPE_ROOT,
-	GF_TOKEN_TYPE_NAME,
-	GF_TOKEN_TYPE_CURLY_CLOSE,
-	GF_TOKEN_TYPE_COMMENT,
-	GF_TOKEN_TYPE_COMPOSITE_TYPE,
-	GF_TOKEN_TYPE_STRING,
-	GF_TOKEN_TYPE_FLOAT,
-	GF_TOKEN_TYPE_INTEGER,
-	GF_TOKEN_TYPE_END_FILE,
-	GF_TOKEN_TYPE_VALUE_ASSIGN
+	GF_TOKEN_TYPE_ROOT,           // The type exclusively held by the hidden root token of the parser.
+	GF_TOKEN_TYPE_NAME,           // A named/identifier token that isn't a string, integer, float or string.
+	GF_TOKEN_TYPE_CURLY_CLOSE,    // This } token.
+	GF_TOKEN_TYPE_COMMENT,        // The token associated with a comment which is /* and */
+	GF_TOKEN_TYPE_COMPOSITE_TYPE, // This is a named/identifier token that contains other tokens.
+	GF_TOKEN_TYPE_STRING,         // A string value token which is between two quotations ""
+	GF_TOKEN_TYPE_FLOAT,          // A floating point value like 1.0 or 1.
+	GF_TOKEN_TYPE_INTEGER,        // An integer value which is a essentially a number without a floating point.
+	GF_TOKEN_TYPE_END_FILE,       // The token reserved for the end of a file.
+	GF_TOKEN_TYPE_VALUE_ASSIGN    // This token { which designates an assignment is about to happen for a composite token.
 } gf_TokenType;
 
 typedef struct gf_Token {
@@ -54,11 +127,32 @@ typedef struct gf_Token {
 	gf_u64 length;
 	gf_TokenType type;
 	gf_u64 lineno;
+	gf_u64 colno;
 	struct gf_Token *next;
 } gf_Token;
 
+/*
+Name:        void gf_PrintToken(gf_Token *token);
+Description: Prints a token to stdout.
+Assumptions: - *token is not NULL and is NULL terminated. 
+Returns:     Nothing.
+*/
 void gf_PrintToken(gf_Token *token);
+
+/*
+Name:        void gf_PrintLineToken(gf_Token *token);
+Description: Prints a token to stdout with a newline character at the end
+Assumptions: - *token is not NULL and is NULL terminated. 
+Returns:     Nothing.
+*/
 void gf_PrintLineToken(gf_Token *token);
+
+/*
+Name:        const char *gf_TokenTypeToString(gf_TokenType type);
+Description: Returns a NULL terminated string which corresponds to the given name of a token type.
+Assumptions: - type is a valid gf_TokenType
+Returns:     The names of the token type as a string. The string is NULL terminated.
+*/
 const char *gf_TokenTypeToString(gf_TokenType type);
 
 //-----------------------------------------------------------------------------------\\
@@ -71,20 +165,70 @@ typedef enum gf_LogLevel {
 	GF_LOG_INFO
 } gf_LogLevel;
 
+/*
+Name:        gf_LogFunctionPtr
+Description: This is the function signature for the log function. This can be user defined. The provided token can be NULL.
+*/
 typedef void (*gf_LogFunctionPtr)(gf_LogLevel, int, gf_Token *, const char *, va_list);
+/*
+Name:        gf_AllocatorFunctionPtr
+Description: This is the function signature for the allocation function. This can be user defined. By default this is malloc().
+             It must allocate pointers that are not invalidated with subsequent allocations.
+*/
 typedef void *(*gf_AllocatorFunctionPtr)(size_t);
+/*
+Name:        gf_FreeFunctionPtr
+Description: This is the function signature for the free function. This can be user defined. By default this is free().
+			 This function must be able to deal with NULL pointers.
+*/
 typedef void (*gf_FreeFunctionPtr)(void *);
 
+/*
+Name:        gf_LogAllocateFreeFunctions
+Description: This is a helper struct that stores function pointers responsible for logging, allocating and freeing.
+             If any of these are NULL then gf_DefaultLog(), malloc() and free() are used respectively. 
+			 The allocator must obey the rules of malloc() which means it's pointers can not be invalidated after they 
+			 are allocated. free() must work on a NULL.
+*/
 typedef struct gf_LogAllocateFreeFunctions {
 	gf_LogFunctionPtr Log;
 	gf_AllocatorFunctionPtr Allocate;
 	gf_FreeFunctionPtr Free;
 } gf_LogAllocateFreeFunctions;
 
+/*
+Name:        void gf_DefaultLog(gf_LogLevel level, int lineno, gf_Token *, const char *format, va_list vlist);
+Description: The default logging function used if none is specified. This prints to stdout.
+Assumptions: - The token can be NULL.
+             - *format is assumed to be not NULL.
+Returns:     Nothing.
+*/
 void gf_DefaultLog(gf_LogLevel level, int lineno, gf_Token *, const char *format, va_list vlist);
+
+/*
+Name:        void gf_Log(gf_LogFunctionPtr Log, gf_LogLevel level, int lineno, gf_Token *, const char *format, ...);
+Description: An internal function that is called when the logging macro is invoked. This function calls the user specified log function.
+Assumptions: - The token can be NULL.
+             - *format is assumed to be not NULL.
+Returns:     Nothing.
+*/
 void gf_Log(gf_LogFunctionPtr Log, gf_LogLevel level, int lineno, gf_Token *, const char *format, ...);
 
+/*
+Name:        GF_LOG(loaderOrSaver, level, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, NULL, __VA_ARGS__)
+Description: A helper macro that calls gf_Log which in turn, calls the users logging function. A macro is used so the line number can be obtained
+Assumptions: - loaderOrSave is not NULL and is of type gf_Loader or gf_Saver.
+Returns:     Nothing.
+*/
 #define GF_LOG(loaderOrSaver, level, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, NULL, __VA_ARGS__)
+
+/*
+Name:        GF_LOG(loaderOrSaver, level, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, NULL, __VA_ARGS__)
+Description: The same as GF_LOG but with a token too.
+Assumptions: - loaderOrSave is not NULL and is of type gf_Loader or gf_Saver.
+             - The token can be NULL.
+Returns: Nothing.
+*/
 #define GF_LOG_WITH_TOKEN(loaderOrSaver, level, token, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, token, __VA_ARGS__)
 
 //-----------------------------------------------------------------------------------\\
@@ -96,22 +240,394 @@ typedef struct gf_Saver {
 	unsigned int indent;
 } gf_Saver;
 
+/*
+Name:        void gf_InitSaver(gf_Saver *saver, gf_LogFunctionPtr logfunction);
+Description: Initialises the gf_Saver. Must be called before using the gf_Saver. 
+             You can call it again to reset the saver.
+             If the logfunction is set to the NULL the default gf_DefaultLog function is used instead.
+             logfunction is a function pointer to a logging function of gf_LogFunctionPtr signature.
+             You can use your own here and any time the GF_LOG macros are invoked, your logging function will get called.
+Assumptions: - saver is not NULL.
+             - logfunction can be NULL. If it is the default logging function is used
+Returns:     Nothing.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+*/
 void gf_InitSaver(gf_Saver *saver, gf_LogFunctionPtr logfunction);
-int  gf_PrintIndent(gf_Saver *saver, FILE *file);
-int  gf_SaveVariableS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value);
-int  gf_SaveVariableS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value);
-int  gf_SaveVariableU32(gf_Saver *saver, FILE *file, const char *identifier, gf_u32 *value);
-int  gf_SaveVariableU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value);
-int  gf_SaveVariableString(gf_Saver *saver, FILE *file, const char *identifier, const char *str);
-int  gf_SaveVariableF32(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *value);
-int  gf_SaveVariableF64(gf_Saver *saver, FILE *file, const char *identifier, gf_f64 *value);
-int  gf_SaveVariableStringSpan(gf_Saver *saver, FILE *file, const char *identifier, const char *str, int strLen);
-int  gf_SaveVariableVec3(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *x, gf_f32 *y, gf_f32 *z);
-int  gf_SaveArrayU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value, int count);
-int  gf_SaveArrayS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value, int count);
-int  gf_SaveArrayS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value, int count);
-int  gf_SaveStartList(gf_Saver *saver, FILE *file, const char *identifier);
-int  gf_SaveEndList(gf_Saver *saver, FILE *file);
+
+/*
+Name:        int gf_PrintIndent(gf_Saver *saver, FILE *file);
+Description: Internal function used to insert spaces into the file corresponding to the current indent level of the saver.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+*/
+int gf_PrintIndent(gf_Saver *saver, FILE *file);
+
+/*
+Name:        int gf_SaveVariableS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value);
+Description: Saves a variable to the file with the given value. This will be in the format "a { 2 }" 
+             where "a" is the identifier and "2" is the value.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+			 - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+gf_s64 value = 1;
+
+gf_SaveVariableS64(&saver, file, "identifier", &value);
+
+fclose(file);
+*/
+int gf_SaveVariableS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value);
+
+/*
+Name:        int gf_SaveVariableS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value);
+Description: Saves a variable to the file with the given value. This will be in the format "a { 2 }" 
+             where "a" is the identifier and "2" is the value.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+gf_s32 value = 1;
+
+gf_SaveVariableS32(&saver, file, "identifier", &value);
+
+fclose(file);
+*/
+int gf_SaveVariableS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value);
+
+/*
+Name:        int gf_SaveVariableU32(gf_Saver *saver, FILE *file, const char *identifier, gf_u32 *value);
+Description: Saves a variable to the file with the given value. This will be in the format "a { 2 }" 
+             where "a" is the identifier and "2" is the value.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+gf_u32 value = 1;
+
+gf_SaveVariableU32(&saver, file, "identifier", &value);
+
+fclose(file);
+*/
+int gf_SaveVariableU32(gf_Saver *saver, FILE *file, const char *identifier, gf_u32 *value);
+
+/*
+Name:        int gf_SaveVariableU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value);
+Description: Saves a variable to the file with the given value. This will be in the format "a { 2 }" 
+             where "a" is the identifier and "2" is the value.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+gf_u64 value = 1;
+
+gf_SaveVariableU64(&saver, file, "identifier", &value);
+
+fclose(file);
+*/
+int gf_SaveVariableU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value);
+
+/*
+Name:        int gf_SaveVariableString(gf_Saver *saver, FILE *file, const char *identifier, const char *str);
+Description: Saves a string to the file with the given value. This will be in the format "a { "Hello, world" }" 
+             where "a" is the identifier and "Hellow, world" is the string.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *str is not NULL and is a NULL terminated string.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+const char *str = "hello, world";
+
+gf_SaveVariableString(&saver, file, "identifier", str);
+
+fclose(file);
+*/
+int gf_SaveVariableString(gf_Saver *saver, FILE *file, const char *identifier, const char *str);
+
+/*
+Name:        int gf_SaveVariableF32(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *value);
+Description: Saves a variable to the file with the given value. This will be in the format "a { 2.0 }" 
+             where "a" is the identifier and "2.0" is the value.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+float value = 1.0;
+
+gf_SaveVariableF32(&saver, file, "identifier", &value);
+
+fclose(file);
+*/
+int gf_SaveVariableF32(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *value);
+
+/*
+Name:        int gf_SaveVariableF64(gf_Saver *saver, FILE *file, const char *identifier, gf_f64 *value);
+Description: Saves a variable to the file with the given value. This will be in the format "a { 2.0 }" 
+             where "a" is the identifier and "2.0" is the value.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+double value = 1.0;
+
+gf_SaveVariableF64(&saver, file, "identifier", &value);
+
+fclose(file);
+*/
+int gf_SaveVariableF64(gf_Saver *saver, FILE *file, const char *identifier, gf_f64 *value);
+
+/*
+Name:        int gf_SaveVariableStringSpan(gf_Saver *saver, FILE *file, const char *identifier, const char *str, int strLen);
+Description: Saves a string span to the file with the given value. This will be in the format "a { "Hello, world" }" 
+             where "a" is the identifier and "Hellow, world" is the string.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *str is not NULL and is a NULL terminated string.
+             - if strlen is longer than the NULL terminated string then only the string up to the NULL terminated character is saved.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+const char *str = "hello, world";
+
+gf_SaveVariableStringSpan(&saver, file, "identifier", str, 5);
+
+fclose(file);
+*/
+int gf_SaveVariableStringSpan(gf_Saver *saver, FILE *file, const char *identifier, const char *str, int strLen);
+
+/*
+Name:        int gf_SaveVariableVec3(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *x, gf_f32 *y, gf_f32 *z);
+Description: Saves a vector to the file with the given value. This will be in the format "a { 2.0, 1.0, 1.2 }" 
+             where "a" is the identifier and "2.0, 1.0, 1.2" is x, y and z respectively.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *x, *y and *z are not NULL
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+float x = 1.0f;
+float y = 2.0f;
+float z = 3.0f;
+
+gf_SaveVariableVec3(&saver, file, "identifier", x, y, z);
+
+fclose(file);
+*/
+int gf_SaveVariableVec3(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *x, gf_f32 *y, gf_f32 *z);
+/*
+Name:        int gf_SaveArrayU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value, int count);
+Description: Saves an array to the file. This will be in the format "a { 1, 2, ... }" 
+             up to a "count" of values.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+             - value is atleast of length count.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+gf_u64 value[] = { 1, 2 };
+gf_SaveArrayU64(&saver, file, "identifier", value, 2);
+
+fclose(file);
+*/
+int gf_SaveArrayU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value, int count);
+
+/*
+Name:        int gf_SaveArrayS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value, int count);
+Description: Saves an array to the file. This will be in the format "a { 1, 2, ... }" 
+             up to a "count" of values.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+             - value is atleast of length count.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+gf_s64 value[] = { 1, 2 };
+gf_SaveArrayS64(&saver, file, "identifier", value, 2);
+
+fclose(file);
+*/
+int gf_SaveArrayS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value, int count);
+
+/*
+Name:        int gf_SaveArrayS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value, int count);
+Description: Saves an array to the file. This will be in the format "a { 1, 2, ... }" 
+             up to a "count" of values.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - *value is not NULL
+             - value is atleast of length count.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+gf_Saver saver;
+gf_SaveInit(&saver, NULL);
+
+FILE *file = fopen(file, "myfile", "rb");
+if (!file) return 0;
+
+gf_u32 value[] = { 1, 2 };
+gf_SaveArrayS32(&saver, file, "identifier", value, 2);
+
+fclose(file);
+*/
+int gf_SaveArrayS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value, int count);
+
+/*
+Name:        int gf_SaveStartList(gf_Saver *saver, FILE *file, const char *identifier);
+Description: Saves a composite list to the file. This will be in the format "a { " 
+             If you want to start writing an arbitrary list of values then this is a good start.
+             Must be capped off with a call to gf_SaveEndList otherwise your file will be malformed.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - When finished saveing to this list you end with a call to gf_SaveEndList.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
+
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
+
+	gf_SaverStartList(&saver, file);
+	{
+		float value = 1.0f;
+		gf_SaveVariableF64(&saver, file, "myfloat", &value);
+	}
+	gf_SaverEndList(&saver, file);
+
+	fclose(file);
+}
+*/
+int gf_SaveStartList(gf_Saver *saver, FILE *file, const char *identifier);
+
+/*
+Name:        int gf_SaveEndList(gf_Saver *saver, FILE *file);
+Description: Saves the end of a composite list to the file. This will be in the format " }" 
+             If you want to end a list this is how you do it.
+Assumptions: - gf_InitSaver must have been called on saver atleast once.
+             - *saver is not NULL
+             - *file is not NULL and is a valid file.
+             - *identifier is not NULL and is a NULL terminated string.
+             - Assumes gf_SaveEndList was called to start the list you want to end.
+Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
+Examples:
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
+
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
+
+	gf_SaverStartList(&saver, file);
+	{
+		float value = 1.0f;
+		gf_SaveVariableF64(&saver, file, "myfloat", &value);
+	}
+	gf_SaverEndList(&saver, file);
+
+	fclose(file);
+}
+*/
+int gf_SaveEndList(gf_Saver *saver, FILE *file);
 
 //-----------------------------------------------------------------------------------\\
 
@@ -121,11 +637,59 @@ typedef struct gf_Tokeniser {
 	const char *buffer;
 	gf_u64 index;
 	gf_u64 count;
+	gf_u64 lineno;
+	gf_u64 colno;
 } gf_Tokeniser;
 
+/*
+Name:        void gf_InitTokeniser(gf_Tokeniser *tokeniser, const char *buffer, gf_u64 count);
+Description: Initialises the tokeniser. This must be called before using the tokeniser. You can call this multiple times to reset the tokeniser. 
+             The buffer you wish to tokenise is passed in, along with the buffer length (count). This is not copied. So, while you 
+			 are tokenising and using the tokeniser, this buffer must be valid.
+			 This buffer must be NULL terminated.
+Assumptions: - *tokeniser is not NULL
+			 - *buffer is not NULL and is NULL terminated.
+			 - The count must represent a valid length for the buffer. If NULL terminating character is 
+			   encountered before the count is reached then tokenising will stop.
+Returns:     Nothing.
+*/
 void gf_InitTokeniser(gf_Tokeniser *tokeniser, const char *buffer, gf_u64 count);
+/*
+Name:        char gf_GetChar(gf_Tokeniser *tokeniser);
+Description: Get the character at the tokenisers internal current index, from the buffer pointed to by the tokeniser.
+             If the buffer's end is reached this will return a NULL terminating character.
+Assumptions: - tokeniser has been initialised with a call to gf_InitTokeniser();
+             - *tokeniser is not NULL
+			 - Assumes the buffer that the tokeniser is pointing to is still valid.
+Returns:     Returns the character of the buffer pointed to by the tokeniser, at the tracked index. Returns a NULL terminator if the end of this buffer is reached.
+*/
 char gf_GetChar(gf_Tokeniser *tokeniser);
+/*
+Name:        void gf_IncrementIndex(gf_Tokeniser *tokeniser);
+Description: Increments the internal tracking index of the tokeniser. If the end of the buffer tracked
+             by the tokeniser is reached, this tracking index is not incremented.
+Assumptions: - tokeniser has been initialised with a call to gf_InitTokeniser();
+			 - *tokeniser is not NULL
+Returns:     Nothing.
+*/
 void gf_IncrementIndex(gf_Tokeniser *tokeniser);
+/*
+Name:        void gf_IncrementLineNo(gf_Tokeniser *tokeniser);
+Description: Increments the current line number that is being tracked by the tokeniser.
+Assumptions: - tokeniser has been initialised with a call to gf_InitTokeniser();
+			 - *tokeniser is not NULL
+Returns:     Nothing.
+*/
+void gf_IncrementLineNo(gf_Tokeniser *tokeniser);
+/*
+Name:        const char *gf_Ptr(gf_Tokeniser *tokeniser);
+Description: Returns a pointer into the buffer pointed to by the tokeniser at the internal tokeniser index.
+Assumptions: - tokeniser has been initialised with a call to gf_InitTokeniser();
+			 - *tokeniser is not NULL
+			 - Assumes the buffer that the tokeniser is pointing to is still valid.
+Returns:     A pointer into the buffer that the tokeniser points to at the location of the tokenisers internal tracking index.
+             If the end of the buffer is reached by the internal tracking index, then a NULL is returned.
+*/
 const char *gf_Ptr(gf_Tokeniser *tokeniser);
 
 typedef struct gf_LoaderNode {
@@ -148,44 +712,823 @@ typedef struct gf_Loader {
 	gf_Token *curToken;
 	gf_LoaderNode *rootNode;
 	gf_LoaderNode *lastNode;
+	char *fileContentsBuffer;
 } gf_Loader;
 
+/*
+Name:        void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctions);
+Description: Initialises the loader. This is called internally when calling one of gf_Load...() functions. Do not call again until gf_Unload is called.
+             Ideally don't call at all and just call one of the load function instead to begin using the loader.
+	         The loader is initialised with a log, allocate and 
+             free function pointer data structure. If this is NULL, the default logging function, malloc() and free() are used respectively.
+			 If it is not NULL and any of the helper functions within are NULL these default to gf_DefaultLog, malloc() and free respectively.
+			 The allocator MUST have pointers that are not invalidated as more data is allocated.
+Assumptions: - *loader is not NULL
+			 - gf_InitLoader() has not been called yet.
+Returns:     Nothing.
+*/
 void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctions);
+
+/*
+Name:        void gf_IncrementLastTokenLength(gf_Loader *loader);
+Description: Increments the length of the last allocated token by loader.
+Assumptions: - gf_InitLoader() has been called on *loader.
+             - gf_LoadInternal() has been called. i.e. some data has been loaded.
+Returns:     Nothing.
+*/
 void gf_IncrementLastTokenLength(gf_Loader *loader);
+
+/*
+Name:        int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno);
+Description: Allocates a new token used by the loader. The user specified allocator is used when the loader is 
+             initialised. The token is given the specified type and lineno along with the start string within the loaded
+			 buffer. It starts with a length of 1.
+Assumptions: - gf_InitLoader() has been called on *loader.
+			 - gf_LoadInternal() has been called. i.e. some data has been loaded.
+			 - *loader is not NULL 
+			 - *start is not NULL
+Returns:     Returns 1 if it succeeds. 0 if it fails. The error is logged.
+*/
 int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno);
+
+/*
+Name:        char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename);
+Description: Opens the given file. Allocates it's contents using loader's defined allocator (+1 to include the null terminator).
+			 This allocated buffer is returned as a NULL terminated string.
+Assumptions: - gf_InitLoader() has been called on *loader.
+			 - *loader is not NULL
+			 - *filename is NOT NULL
+Returns:     Returns a terminated string that holds the entire contents of the file +1 for the NULL terminator. 
+             Returns NULL if this failed and the error is logged.
+*/
 char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename);
+
+/*
+Name:        int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser);
+Description: An internal function that begins tokenising the buffer pointed to by the tokeniser.
+Assumptions: - gf_InitLoader() has been called on *loader.
+             - gf_InitTokeniser() has been called on *tokeniser.
+			 - *loader is not NULL
+			 - *tokeniser is not NULL
+Returns:     Returns 1 if this succeeds. 0 if this fails. The error is logged.
+*/
 int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser);
+
+/*
+Name:        int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count);
+Description: Tokenises the NULL terminated buffer that has the length count.
+Assumptions: - gf_InitLoader() has been called on *loader.
+			 - *buffer is NULL terminated.
+			 - count is a valid length for the buffer.
+			 - *loader is not NULL
+			 - *buffer is not NULL
+Returns:     Returns 1 if this succeeds. 0 if this fails. The error is logged.
+*/
 int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count);
+
+/*
+Name:        gf_Token *gf_ConsumeToken(gf_Loader *loader);
+Description: Returns the next token in the token list and increments the current tracking index that 
+			 points to the current token.
+Assumptions: - gf_InitLoader() has been called on *loader.
+			 - *loader is not NULL
+Returns:     Returns NULL if there are no more tokens, else returns the token as a pointer.
+*/
 gf_Token *gf_ConsumeToken(gf_Loader *loader);
+
+/*
+Name:        gf_Token *gf_PeekToken(gf_Loader *loader);
+Description: Returns the current token.
+Assumptions: - gf_InitLoader() has been called on *loader.
+			 - *loader is not NULL
+Returns:     Returns the current token. This can be NULL.
+*/
 gf_Token *gf_PeekToken(gf_Loader *loader);
+
+/*
+Name:        gf_LoaderNode *gf_AddNode(gf_Loader *loader, gf_Token *token);
+Description: Allocates a node using the specified allocation function. Assigns the token to this 
+             node. Returns the newly allocated node.
+Assumptions: - gf_InitLoader() has been called on *loader.
+			 - *token is not NULL.
+Returns:     Returns the newly allocated node. Returns NULL if it fails. The error is logged.
+*/
 gf_LoaderNode *gf_AddNode(gf_Loader *loader, gf_Token *token);
+
+/*
+Name:        void gf_AddChild(gf_LoaderNode *parent, gf_LoaderNode *child);
+Description: Adds the child node to the parents children list of nodes.
+Assumptions: - gf_InitLoader() has been called on *loader.
+			 - *parent is not NULL.
+			 - *child is not NULL.
+Returns:     Nothing.
+*/
 void gf_AddChild(gf_LoaderNode *parent, gf_LoaderNode *child);
+
+/*
+Name:        int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode);
+Description: Parses the token list. The tokeniser must have been called before this happens and 
+             the root node of loader must have been created. This is a recursive function. The first time 
+			 you call it, parentNode must be the root node of the loader.
+Assumptions: - gf_InitLoader() has been called on *loader.
+	         - The loader has performed tokenisation.
+			 - *loader is not NULL.
+			 - *parentNode is not NULL and needs to be the root node when you call this initially.
+Returns:     Returns 1 if it succeeds. Returns 0 if it fails. The error is logged.
+*/
 int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode);
+
+/*
+Name:        int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount);
+Description: Begins tokenising and parsing the passed in buffer, preparing data that can be queried by the user.
+			 Buffer needs to be NULL terminated. The bufferCount needs to represent a valid span for the buffer.
+Assumptions: - *loader is not NULL.
+			 - *buffer is not NULL.
+			 - bufferCount is a valid length for the buffer.
+Returns:     Returns 1 if it succeeds. Returns 0 if it fails. The error is logged.
+*/
 int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount);
+
+/*
+Name:        int gf_LoadFromBuffer(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, gf_LogAllocateFreeFunctions *funcs);
+Description: Begins tokenising and parsing the passed in buffer, preparing data that can be queried by the user.
+             This should be the first thing you call before using the loader. After you are done, you need to call gf_Unload(), even if this function fails.
+			 The buffer needs to be NULL terminated. The bufferCount needs to represent a valid span for the buffer.
+			 *funcs can be NULL or contain NULL function pointers. In this case, the default function pointers are used,
+			 gf_DefaultLog, malloc() and free().
+			 This function allocates things using the passed in allocation function.
+Assumptions: - *loader is not NULL.
+			 - *buffer is not NULL.
+			 - funcs can be NULL.
+			 - bufferCount is a valid length for the buffer.
+Returns:     Returns 1 if it succeeds. Returns 0 if it fails. The error is logged.
+Examples: 
+{
+	gf_Loader loader;
+	const char *buffer = "mydata { 1.0 }";
+	gf_LoadFromBuffer(&loader, buffer, gf_StringLength(buffer), NULL);
+	// ... do stuff ...
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadFromBuffer(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, gf_LogAllocateFreeFunctions *funcs);
+
+/*
+Name:        int gf_LoadFromFile(gf_Loader *loader, const char *filename, gf_LogAllocateFreeFunctions *funcs);
+Description: Begins tokenising and parsing the passed in buffer, preparing data that can be queried by the user.
+			 This should be the first thing you call before using the loader. After you are done, you need to call gf_Unload(), even if this function fails.
+			 This opens the specified file and allocates its contents into a buffer. This buffer is then tokenised and parsed to 
+			 be inspected by the user.
+			 *funcs can be NULL or contain NULL function pointers. In this case, the default function pointers are used,
+			 gf_DefaultLog, malloc() and free().
+			 This function allocates things using the passed in allocation function.
+			 This open
+Assumptions: - *loader is not NULL.
+			 - *filename is not NULL.
+			 - funcs can be NULL.
+Returns:     Returns 1 if it succeeds. Returns 0 if it fails. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+	// ... do stuff ...
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadFromFile(gf_Loader *loader, const char *filename, gf_LogAllocateFreeFunctions *funcs);
+
+/*
+Name:        void gf_Unload(gf_Loader *loader);
+Description: Frees all data allocated by the loader using the user defined Free() function. Must be called after gf_Load...() 
+             function has been called prefably when you are finished with the loader. It does not matter,
+			 if the load failed, you still need to call gf_Unload.
+			 After unload is called you must load the loader again with new data if you want to use it.
+			 If you called gf_LoadFromFile, this deallocates the buffer that was allocated.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called.
+             - *loader is not NULL.
+Returns:     Nothing
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+	// ... do stuff ...
+	gf_Unload(&loader);
+}
+*/
 void gf_Unload(gf_Loader *loader);
+
+/*
+Name:        int gf_LoaderNodeToU32(gf_Loader *loader, gf_LoaderNode *node, gf_u32 *value);
+Description: Converts the value of the node and copies it into value.
+             Does type checking of the node. 
+			 A u32 node is an integer node. This takes the form => 123
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - *value is not NULL.
+			 - node can be NULL.
+Returns:     Returns 1 if the conversion was successful. Returns 0 if node was NULL, the node 
+             was not an integer type or the conversion fail. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+	
+	gf_LoaderNode *root = gf_GetRoot(loader);
+	gf_LoaderNode *child = gf_GetChild(loader, root);
+
+	gf_u32 value;
+	gf_LoaderNodeToU32(&loader, child, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoaderNodeToU32(gf_Loader *loader, gf_LoaderNode *node, gf_u32 *value);
+
+/*
+Name:        int gf_LoaderNodeToU64(gf_Loader *loader, gf_LoaderNode *node, gf_u64 *value);
+Description: Converts the value of the node and copies it into value.
+			 Does type checking of the node.
+			 A u64 node is an integer node. This takes the form => 123
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - *value is not NULL.
+			 - node can be NULL.
+Returns:     Returns 1 if the conversion was successful. Returns 0 if node was NULL, the node
+			 was not an integer type or the conversion fail. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(loader);
+	gf_LoaderNode *child = gf_GetChild(loader, root);
+
+	gf_u64 value;
+	gf_LoaderNodeToU64(&loader, child, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoaderNodeToU64(gf_Loader *loader, gf_LoaderNode *node, gf_u64 *value);
+
+/*
+Name:        int gf_LoaderNodeToS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value);
+Description: Converts the value of the node and copies it into value.
+			 Does type checking of the node.
+			 A s32 node is an integer node. This takes the form => 123
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - *value is not NULL.
+			 - node can be NULL.
+Returns:     Returns 1 if the conversion was successful. Returns 0 if node was NULL, the node
+			 was not an integer type or the conversion fail. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(loader);
+	gf_LoaderNode *child = gf_GetChild(loader, root);
+
+	gf_s32 value;
+	gf_LoaderNodeToS32(&loader, child, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoaderNodeToS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value);
+
+/*
+Name:        int gf_LoaderNodeToS64(gf_Loader *loader, gf_LoaderNode *node, gf_s64 *value);
+Description: Converts the value of the node and copies it into value.
+			 Does type checking of the node.
+			 A s64 node is an integer node. This takes the form => 123
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - *value is not NULL.
+			 - node can be NULL.
+Returns:     Returns 1 if the conversion was successful. Returns 0 if node was NULL, the node
+			 was not an integer type or the conversion fail. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(loader);
+	gf_LoaderNode *child = gf_GetChild(loader, root);
+
+	gf_s64 value;
+	gf_LoaderNodeToS64(&loader, child, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoaderNodeToS64(gf_Loader *loader, gf_LoaderNode *node, gf_s64 *value);
+
+/*
+Name:        int gf_LoaderNodeToF64(gf_Loader *loader, gf_LoaderNode *node, gf_f64 *value);
+Description: Converts the value of the node and copies it into value.
+			 Does type checking of the node.
+			 A f64 node is an floating point node. This takes the form => 1.0
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - *value is not NULL.
+			 - node can be NULL.
+Returns:     Returns 1 if the conversion was successful. Returns 0 if node was NULL, the node
+			 was not an floating point type or the conversion fail. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(loader);
+	gf_LoaderNode *child = gf_GetChild(loader, root);
+
+	gf_f64 value;
+	gf_LoaderNodeToF64(&loader, child, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoaderNodeToF64(gf_Loader *loader, gf_LoaderNode *node, gf_f64 *value);
+
+/*
+Name:        int gf_LoaderNodeToF32(gf_Loader *loader, gf_LoaderNode *node, gf_f32 *value);
+Description: Converts the value of the node and copies it into value.
+			 Does type checking of the node.
+			 A f32 node is an floating point node. This takes the form => 1.0
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - *value is not NULL.
+			 - node can be NULL.
+Returns:     Returns 1 if the conversion was successful. Returns 0 if node was NULL, the node
+			 was not an floating point type or the conversion fail. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(loader);
+	gf_LoaderNode *child = gf_GetChild(loader, root);
+
+	gf_f32 value;
+	gf_LoaderNodeToF32(&loader, child, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoaderNodeToF32(gf_Loader *loader, gf_LoaderNode *node, gf_f32 *value);
+
+/*
+Name:        int gf_LoaderNodeToString(gf_Loader *loader, gf_LoaderNode *node, char *src, gf_u64 srcCapacityIncludesNullTerminator);
+Description: Converts the value of the node and copies it into src.
+		     srcCapacityIncludesNullTerminator is the length of src + the NULL terminating character.
+			 Does type checking of the node.
+			 A string node is a string node. This takes the form => "Hello!"
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - *src is not NULL.
+			 - node can be NULL.
+Returns:     Returns 1 if the conversion was successful. Returns 0 if node was NULL, the node
+			 was not an string type or the passed in capacity is not big enough to fit the size of the token. The error is logged.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(loader);
+	gf_LoaderNode *child = gf_GetChild(loader, root);
+
+	gf_f32 value;
+	gf_LoaderNodeToF32(&loader, child, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoaderNodeToString(gf_Loader *loader, gf_LoaderNode *node, char *src, gf_u64 srcCapacityIncludesNullTerminator);
+
+/*
+Name:        gf_LoaderNode *gf_GetRoot(gf_Loader *loader);
+Description: Gets the root node of the parsed contents of a file. gf_LoadFromBuffer or gf_LoadFromFile 
+			 must have been called and must have been successful before a valid root exists.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+Returns:     Returns the root node. This cannot be NULL if the assumptions are satisfied.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_Unload(&loader);
+}
+*/
 gf_LoaderNode *gf_GetRoot(gf_Loader *loader);
+
+/*
+Name:        gf_LoaderNode *gf_GetNext(gf_Loader *loader, gf_LoaderNode *node);
+Description: Gets the next node after *node.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+Returns:     Returns the next node. Returns NULL if there is no next node or node is NULL
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+	gf_LoaderNode *nextNode = gf_GetNext(&loader, root);
+
+	gf_Unload(&loader);
+}
+*/
 gf_LoaderNode *gf_GetNext(gf_Loader *loader, gf_LoaderNode *node);
+
+/*
+Name:        gf_LoaderNode *gf_GetChild(gf_Loader *loader, gf_LoaderNode *node);
+Description: Gets the first child node in *node's child list.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+Returns:     Returns the first child node. If there are no children or node is NULL this returns NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+	gf_LoaderNode *childNode = gf_GetChild(&loader, root);
+
+	gf_Unload(&loader);
+}
+*/
 gf_LoaderNode *gf_GetChild(gf_Loader *loader, gf_LoaderNode *node);
+
+/*
+Name:        gf_TokenType gf_GetType(gf_Loader *loader, gf_LoaderNode *node);
+Description: Gets the token type of the node. 
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+Returns:     Returns the token type of the node. If the node is NULL then the returned token type is GF_TOKEN_TYPE_END_FILE
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+	
+	gf_TokenType tokenType = gf_GetType(&loader, root);
+
+	gf_Unload(&loader);
+}
+*/
 gf_TokenType gf_GetType(gf_Loader *loader, gf_LoaderNode *node);
+
+/*
+Name:        gf_LoaderNode *gf_FindFirstChild(gf_Loader *loader, gf_LoaderNode *node, const char *str);
+Description: Finds the first child in the node's child list that has a name that is equal to str.
+             Only finds nodes that are composite/named types (named nodes that may have children).
+			 If two nodes have the same name, the first child in the list is returned. The list of children
+			 has the same order as the children in the file.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - str is not NULL and is NULL terminated.
+Returns:     Returns the first child in the node's child list that has the same name as str. Returns NULL if 
+             this could not be found or node is NULL. See description for more details.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_Unload(&loader);
+}
+*/
 gf_LoaderNode *gf_FindFirstChild(gf_Loader *loader, gf_LoaderNode *node, const char *str);
+
+/*
+Name:       gf_LoaderNode *gf_FindFirstNext(gf_Loader *loader, gf_LoaderNode *node, const char *str);
+Description: Finds the first node in the passed in node's next list. 
+             The first node that has a name equal to str in the next list, starting at node, is returned.
+			 Only finds nodes that are composite/named types (named nodes that may have children).
+			 If two nodes have the same name, the first node in the list is returned. 
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - str is not NULL and is NULL terminated.
+Returns:     Returns the first node after the current node that has the same name as str. Returns NULL if
+			 this could not be found or node is NULL. See description for more details.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_LoaderNode *nextNode = gf_FindFirstNext(&loader, childNode, "NextName");
+
+	gf_Unload(&loader);
+}
+*/
 gf_LoaderNode *gf_FindFirstNext(gf_Loader *loader, gf_LoaderNode *node, const char *str);
+
+/*
+Name:        int gf_LoadVariableU32(gf_Loader *loader, gf_LoaderNode *node, gf_u32 *value);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+             If the node has the form => Var { 1 }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - value is not NULL
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described 
+             in the description, the conversion to the value failed, the value node in is the wrong type or
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_u32 value = 0;
+	gf_LoadVariableU32(&loader, childNode, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableU32(gf_Loader *loader, gf_LoaderNode *node, gf_u32 *value);
+
+/*
+Name:        int gf_LoadVariableU64(gf_Loader *loader, gf_LoaderNode *node, gf_u64 *value);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { 1 }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - value is not NULL
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the conversion to the value failed, the value node in is the wrong type or
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_u64 value = 0;
+	gf_LoadVariableU64(&loader, childNode, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableU64(gf_Loader *loader, gf_LoaderNode *node, gf_u64 *value);
+
+/*
+Name:        int gf_LoadVariableS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { 1 }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - value is not NULL
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the conversion to the value failed, the value node in is the wrong type or
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_s32 value = 0;
+	gf_LoadVariableS32(&loader, childNode, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value);
+
+/*
+Name:        int gf_LoadVariableS64(gf_Loader *loader, gf_LoaderNode *node, gf_s64 *value);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { 1 }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - value is not NULL
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the conversion to the value failed, the value node in is the wrong type or
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_s64 value = 0;
+	gf_LoadVariableS64(&loader, childNode, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableS64(gf_Loader *loader, gf_LoaderNode *node, gf_s64 *value);
+
+/*
+Name:        int gf_LoadVariableF64(gf_Loader *loader, gf_LoaderNode *node, gf_f64 *value);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { 1.0 }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - value is not NULL
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the conversion to the value failed, the value node in is the wrong type or
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_f64 value = 0;
+	gf_LoadVariableF64(&loader, childNode, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableF64(gf_Loader *loader, gf_LoaderNode *node, gf_f64 *value);
+
+/*
+Name:        int gf_LoadVariableF32(gf_Loader *loader, gf_LoaderNode *node, gf_f32 *value);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { 1.0 }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - value is not NULL
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the conversion to the value failed, the value node in is the wrong type or
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_f32 value = 0;
+	gf_LoadVariableF32(&loader, childNode, &value);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableF32(gf_Loader *loader, gf_LoaderNode *node, gf_f32 *value);
+
+/*
+Name:        int gf_LoadVariableVec3(gf_Loader *loader, gf_LoaderNode *node, gf_f32 *x, gf_f32 *y, gf_f32 *z);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { 1.0, 2.0, 3.0 }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - x, y, z is not NULL
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the conversion to the value failed, the value nodes are in the wrong type or
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_f32 x = 0.0f;
+	gf_f32 y = 0.0f;
+	gf_f32 z = 0.0f;
+	gf_LoadVariableVec3(&loader, childNode, &x, &y, &z);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableVec3(gf_Loader *loader, gf_LoaderNode *node, gf_f32 *x, gf_f32 *y, gf_f32 *z);
+
+/*
+Name:        int gf_LoadVariableString(gf_Loader *loader, gf_LoaderNode *node, char *str, gf_u64 lenWithNullTerminator);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { "Hello, world" }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - str is not NULL
+			 - str is NULL terminated.
+			 - lenWithNullTerminator corresponds to the length of the str + 1 for the null terminator.
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the lenWithNullTerminator is not big enough to fit the value of the node, the value nodes are in the wrong type or the
+			 node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	char strbuffer[5];
+	gf_LoadVariableString(&loader, childNode, strbuffer, 5);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadVariableString(gf_Loader *loader, gf_LoaderNode *node, char *str, gf_u64 lenWithNullTerminator);
+
+/*
+Name:        int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u64 count);
+Description: A helper function that takes a set of nodes in a certain form and converts them to a value.
+			 If the node has the form => Var { 1, 2, 3, ... }, where Var corresponds to the passed in node, the value inside
+			 the braces is converted and copied into value.
+Assumptions: - gf_LoadFromBuffer or gf_LoadFromFile has been called and was successful.
+			 - *loader is not NULL.
+			 - node can be NULL
+			 - value is not NULL.
+			 - count corresponds to a valid range of the value array.
+Returns:     Returns 1 if successful. Returns 0 if, either, the node is not in the form as described
+			 in the description, the conversion to the value failed, the value nodes are in the wrong type, the length of the 
+			 list is bigger than the count and array provided or node is NULL.
+Examples:
+{
+	gf_Loader loader;
+	const char *filename = "myfile.gf";
+	gf_LoadFromFile(&loader, filename, NULL);
+
+	gf_LoaderNode *root = gf_GetRoot(&loader);
+
+	gf_LoaderNode *childNode = gf_FindFirstChild(&loader, root, "ChildName");
+
+	gf_s32 arr[3] = {1, 2, 3};
+	gf_LoadArrayS32(&loader, childNode, arr, 3);
+
+	gf_Unload(&loader);
+}
+*/
 int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u64 count);
 
 
@@ -197,6 +1540,9 @@ int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u6
 //-------------------------STRING CONVERSIONS---------------------------------------\\
 
 int gf_AreStringSpansEqual(const char *a, gf_u64 alength, const char *b, gf_u64 blength) {
+	assert(a);
+	assert(b);
+
 	if (alength != blength) return 0;
 	gf_u64 i = 0;
 	while (i < alength) {
@@ -210,12 +1556,14 @@ int gf_AreStringSpansEqual(const char *a, gf_u64 alength, const char *b, gf_u64 
 
 gf_u64 gf_StringLength(const char *str) {
 	assert(str);
+
 	gf_u64 len = 0;
 	while (str[len] != '\0') len++;
 	return len;
 }
 
 int gf_StringSpanToU32(const char *start, uint64_t length, gf_u32 *value) {
+	assert(start);
 
 	if (*start == '-') {
 		return 0;
@@ -240,6 +1588,7 @@ int gf_StringSpanToU32(const char *start, uint64_t length, gf_u32 *value) {
 }
 
 int gf_StringSpanToU64(const char *start, uint64_t length, gf_u64 *value) {
+	assert(start);
 
 	if (*start == '-') {
 		return 0;
@@ -264,6 +1613,7 @@ int gf_StringSpanToU64(const char *start, uint64_t length, gf_u64 *value) {
 }
 
 int gf_StringSpanToS32(const char *start, uint64_t length, gf_s32 *value) {
+	assert(start);
 
 	gf_s32 i = strtol(start, NULL, 10);
 	// 0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
@@ -284,6 +1634,7 @@ int gf_StringSpanToS32(const char *start, uint64_t length, gf_s32 *value) {
 }
 
 int gf_StringSpanToS64(const char *start, uint64_t length, gf_s64 *value) {
+	assert(start);
 
 	gf_s64 i = strtoll(start, NULL, 10);
 	// 0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
@@ -304,6 +1655,7 @@ int gf_StringSpanToS64(const char *start, uint64_t length, gf_s64 *value) {
 }
 
 int gf_StringSpanToF64(const char *start, uint64_t length, gf_f64 *value) {
+	assert(start);
 
 	double d = strtod(start, NULL);
 	// 0.0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
@@ -324,6 +1676,8 @@ int gf_StringSpanToF64(const char *start, uint64_t length, gf_f64 *value) {
 }
 
 int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value) {
+	assert(start);
+
 	float f = strtof(start, NULL);
 	// 0.0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
 	if (f == 0.0) {
@@ -347,12 +1701,16 @@ int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value) {
 //-------------------------------------TOKENS----------------------------------------\\
 
 void gf_PrintToken(gf_Token *token) {
+	assert(token);
+
 	for (gf_u64 i = 0; i < token->length; i++) {
 		printf("%c", token->start[i]);
 	}
 }
 
 void gf_PrintLineToken(gf_Token *token) {
+	assert(token);
+
 	gf_PrintToken(token);
 	printf("\n");
 }
@@ -388,6 +1746,7 @@ void gf_DefaultLog(gf_LogLevel level, int lineno, gf_Token *token, const char *f
 		gf_PrintToken(token);
 		printf("\"]");
 		printf("[lineno: %" PRIu64 "]", token->lineno);
+		printf("[colno: %" PRIu64 "]", token->colno);
 	}
 	printf(": ");
 	vprintf(format, vlist);
@@ -406,6 +1765,8 @@ void gf_Log(gf_LogFunctionPtr Log, gf_LogLevel level, int lineno, gf_Token *toke
 //-------------------------------------SAVER----------------------------------------\\
 
 void gf_InitSaver(gf_Saver *saver, gf_LogFunctionPtr logfunction) {
+	assert(saver);
+
 	saver->indent = 0;
 	if (logfunction == NULL) {
 		saver->Log = gf_DefaultLog;
@@ -413,6 +1774,9 @@ void gf_InitSaver(gf_Saver *saver, gf_LogFunctionPtr logfunction) {
 }
 
 int gf_PrintIndent(gf_Saver *saver, FILE *file) {
+	assert(saver);
+	assert(file);
+
 	int result = 0;
 	for (unsigned int i = 0; i < saver->indent; i++) {
 		result = fprintf(file, "  ");
@@ -425,6 +1789,11 @@ int gf_PrintIndent(gf_Saver *saver, FILE *file) {
 }
 
 int gf_SaveVariableS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(value);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -439,6 +1808,11 @@ int gf_SaveVariableS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s
 }
 
 int gf_SaveVariableS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(value);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -453,6 +1827,11 @@ int gf_SaveVariableS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s
 }
 
 int gf_SaveVariableU32(gf_Saver *saver, FILE *file, const char *identifier, gf_u32 *value) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(value);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -468,6 +1847,11 @@ int gf_SaveVariableU32(gf_Saver *saver, FILE *file, const char *identifier, gf_u
 
 
 int gf_SaveVariableU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(value);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -482,6 +1866,11 @@ int gf_SaveVariableU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u
 }
 
 int gf_SaveVariableString(gf_Saver *saver, FILE *file, const char *identifier, const char *str) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(str);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -496,6 +1885,11 @@ int gf_SaveVariableString(gf_Saver *saver, FILE *file, const char *identifier, c
 }
 
 int gf_SaveVariableF32(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *value) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(value);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -511,6 +1905,11 @@ int gf_SaveVariableF32(gf_Saver *saver, FILE *file, const char *identifier, gf_f
 }
 
 int gf_SaveVariableF64(gf_Saver *saver, FILE *file, const char *identifier, gf_f64 *value) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(value);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -526,6 +1925,11 @@ int gf_SaveVariableF64(gf_Saver *saver, FILE *file, const char *identifier, gf_f
 }
 
 int gf_SaveVariableStringSpan(gf_Saver *saver, FILE *file, const char *identifier, const char *str, int strLen) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(str);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -553,8 +1957,12 @@ int gf_SaveVariableStringSpan(gf_Saver *saver, FILE *file, const char *identifie
 	return 1;
 }
 
-
 int gf_SaveVariableVec3(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *x, gf_f32 *y, gf_f32 *z) {
+	assert(saver);
+	assert(file);
+	assert(identifier);
+	assert(x && y && z);
+
 	int result = 0;
 
 	result = gf_PrintIndent(saver, file);
@@ -714,10 +2122,9 @@ int gf_SaveEndList(gf_Saver *saver, FILE *file) {
 
 //-------------------------------------LOADER----------------------------------------\\
 
-// if the function pointer is null the default logging, malloc and free functions will be used respectivel.
-// The allocate function must return pointers that are not invalidated with subsequent allocations
-// the free function must allow null pointers
 void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctions) {
+	assert(loader);
+
 	if (!helperfunctions || helperfunctions->Log == NULL) {
 		loader->Log = gf_DefaultLog;
 	}
@@ -750,24 +2157,27 @@ void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctio
 	loader->rootToken.type = GF_TOKEN_TYPE_ROOT;
 
 	loader->lastToken = &loader->rootToken;
+
+	loader->fileContentsBuffer = NULL;
 }
 
 void gf_IncrementLastTokenLength(gf_Loader *loader) {
+	assert(loader);
 	assert(loader->lastToken);
 	loader->lastToken->length++;
 }
 
-int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno) {
+int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno, gf_u64 colno) {
 	assert(loader->lastToken);
 
 	if (!start) {
-		GF_LOG(loader, GF_LOG_ERROR, "Expecting a token but at the end of the file/buffer");
+		GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Expecting a token but at the end of the file/buffer");
 		return 0;
 	}
 
 	gf_Token *token = (gf_Token *)loader->Allocate(sizeof(gf_Token));
 	if (!token) {
-		GF_LOG(loader, GF_LOG_ERROR, "Out of memory in gf_AddToken");
+		GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Out of memory in gf_AddToken");
 		return 0;
 	}
 
@@ -782,16 +2192,16 @@ int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 
 	token->type = type;
 	token->length = 1;
 	token->lineno = lineno;
+	token->colno = colno;
 	token->next = NULL;
 
 	return 1;
 }
 
-
-// Helper function that opens a file, and allocates a null terminated buffer that stores all its contents.
-// gf_Loader must be initialised.
-// Returns NULL if this fails. Error is logged
-char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename) {
+char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename, gf_u64 *bufferCountWithNullTerminator) {
+	assert(loader);
+	assert(filename);
+	assert(bufferCountWithNullTerminator);
 
 	uint64_t fileSize = 0;
 	uint64_t readBytes = 0;
@@ -824,13 +2234,20 @@ char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *fil
 
 	buffer[fileSize] = '\0';
 
+	*bufferCountWithNullTerminator = fileSize + 1;
+
 	return buffer;
 }
 
 void gf_InitTokeniser(gf_Tokeniser *tokeniser, const char *buffer, gf_u64 count) {
+	assert(tokeniser);
+	assert(buffer);
+
 	tokeniser->buffer = buffer;
 	tokeniser->count = count;
 	tokeniser->index = 0;
+	tokeniser->lineno = 1;
+	tokeniser->colno = 1;
 }
 
 char gf_GetChar(gf_Tokeniser *tokeniser) {
@@ -843,7 +2260,13 @@ char gf_GetChar(gf_Tokeniser *tokeniser) {
 void gf_IncrementIndex(gf_Tokeniser *tokeniser) {
 	if (tokeniser->index < tokeniser->count) {
 		tokeniser->index++;
+		tokeniser->colno++;
 	}
+}
+
+void gf_IncrementLineNo(gf_Tokeniser *tokeniser) {
+	tokeniser->lineno++;
+	tokeniser->colno = 1;
 }
 
 const char *gf_Ptr(gf_Tokeniser *tokeniser) {
@@ -854,33 +2277,34 @@ const char *gf_Ptr(gf_Tokeniser *tokeniser) {
 }
 
 int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
+	assert(loader);
+	assert(tokeniser);
 
-	uint64_t lineno = 1;
 	int result = 0;
 
 	while (1) {
 
 		if (gf_GetChar(tokeniser) == '\0') {
 
-			result = gf_AddToken(loader, "<end token>", GF_TOKEN_TYPE_END_FILE, lineno);
+			result = gf_AddToken(loader, "<end token>", GF_TOKEN_TYPE_END_FILE, tokeniser->lineno, tokeniser->colno);
 			if (!result) {
-				GF_LOG(loader, GF_LOG_ERROR, "Failed to add end file token");
+				GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Failed to add end file token");
 				return 0;
 			}
 			break;
 		}
 		else if (gf_GetChar(tokeniser) == '{') {
-			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_VALUE_ASSIGN, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_VALUE_ASSIGN, tokeniser->lineno, tokeniser->colno);
 			if (!result) {
-				GF_LOG(loader, GF_LOG_ERROR, "Failed to add value assign token");
+				GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Failed to add value assign token");
 				return 0;
 			}
 			gf_IncrementIndex(tokeniser);
 		}
 		else if (gf_GetChar(tokeniser) == '}') {
-			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_CURLY_CLOSE, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_CURLY_CLOSE, tokeniser->lineno, tokeniser->colno);
 			if (!result) {
-				GF_LOG(loader, GF_LOG_ERROR, "Failed to add curly close token");
+				GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Failed to add curly close token");
 				return 0;
 			}
 			gf_IncrementIndex(tokeniser);
@@ -897,7 +2321,7 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 				while (nestedCommentDepth > 0) {
 
 					if (gf_GetChar(tokeniser) == '\0') {
-						GF_LOG(loader, GF_LOG_ERROR, "Comment does not end before the file ends");
+						GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Comment does not end before the file ends");
 						return 0;
 					}
 					else if (gf_GetChar(tokeniser) == '/') {
@@ -914,11 +2338,11 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 						}
 					}
 					else if (gf_GetChar(tokeniser) == '\n') {
-						lineno++;
+						gf_IncrementLineNo(tokeniser);						
 						gf_IncrementIndex(tokeniser);
 					}
 					else if (gf_GetChar(tokeniser) == '\r') {
-						lineno++;
+						gf_IncrementLineNo(tokeniser);
 						gf_IncrementIndex(tokeniser);
 						if (gf_GetChar(tokeniser) == '\n') {
 							gf_IncrementIndex(tokeniser);
@@ -934,11 +2358,11 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 			gf_IncrementIndex(tokeniser);
 		}
 		else if (gf_GetChar(tokeniser) == '\n') {
-			lineno++;
+			gf_IncrementLineNo(tokeniser);
 			gf_IncrementIndex(tokeniser);
 		}
 		else if (gf_GetChar(tokeniser) == '\r') {
-			lineno++;
+			gf_IncrementLineNo(tokeniser);
 			gf_IncrementIndex(tokeniser);
 			if (gf_GetChar(tokeniser) == '\n') {
 				gf_IncrementIndex(tokeniser);
@@ -948,7 +2372,7 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 
 			gf_IncrementIndex(tokeniser);
 
-			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_STRING, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_STRING, tokeniser->lineno, tokeniser->colno);
 			if (!result) {
 				GF_LOG(loader, GF_LOG_ERROR, "Failed to add string token");
 				return 0;
@@ -982,9 +2406,9 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 		}
 		else if (isalpha(gf_GetChar(tokeniser))) {
 
-			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_NAME, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_NAME, tokeniser->lineno, tokeniser->colno);
 			if (!result) {
-				GF_LOG(loader, GF_LOG_ERROR, "Failed to add name token");
+				GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Failed to add name token");
 				return 0;
 			}
 			gf_IncrementIndex(tokeniser);
@@ -999,9 +2423,9 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 			int hasFloatingPoint = 0;
 			int hasPlusOrMinus = gf_GetChar(tokeniser) == '-' || gf_GetChar(tokeniser) == '+';
 
-			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_FLOAT, lineno);
+			result = gf_AddToken(loader, gf_Ptr(tokeniser), GF_TOKEN_TYPE_FLOAT, tokeniser->lineno, tokeniser->colno);
 			if (!result) {
-				GF_LOG(loader, GF_LOG_ERROR, "Failed to add float token");
+				GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Failed to add float token");
 				return 0;
 			}
 			gf_IncrementIndex(tokeniser);
@@ -1032,12 +2456,12 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 			}
 			// Prevents just having a + or - as a valid number
 			if (hasPlusOrMinus && loader->lastToken->length == 1) {
-				GF_LOG(loader, GF_LOG_ERROR, "There is a + or - without a number");
+				GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "There is a + or - without a number after it.");
 				return 0;
 			}
 		}
 		else {
-			GF_LOG(loader, GF_LOG_ERROR, "Unrecognised character %c", gf_GetChar(tokeniser));
+		GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, loader->lastToken, "Unrecognised character %c", gf_GetChar(tokeniser));
 			return 0;
 		}
 	}
@@ -1045,8 +2469,9 @@ int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser) {
 	return 1;
 }
 
-// The buffer doesn't have to be null terminated. But make sure the size is accurate
 int gf_Tokenise(gf_Loader *loader, const char *buffer, gf_u64 count) {
+	assert(loader);
+	assert(buffer);
 
 	gf_Tokeniser tokeniser;
 	gf_InitTokeniser(&tokeniser, buffer, count);
@@ -1106,10 +2531,11 @@ void gf_AddChild(gf_LoaderNode *parent, gf_LoaderNode *child) {
 	child->parent = parent;
 }
 
-// assumes that loader has valid tokens that aren't NULL
 int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode) {
+	assert(loader);
 	assert(loader->curToken);
 	assert(loader->lastToken);
+	assert(parentNode);
 
 	int result = 0;
 	gf_Token *token = NULL;
@@ -1134,6 +2560,9 @@ int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode) {
 				}
 
 				gf_AddChild(parentNode, node);
+
+				// skip over the value assign token
+				gf_ConsumeToken(loader);
 
 				result = gf_Parse(loader, node);
 				if (!result) {
@@ -1164,6 +2593,10 @@ int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode) {
 		else if (token->type == GF_TOKEN_TYPE_END_FILE) {
 			break;
 		}
+		else if (token->type == GF_TOKEN_TYPE_VALUE_ASSIGN)  {
+			GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, token, "unexpected value assign at token. It is likely because the token before it is not an identifier node.");
+			return 0;
+		}
 	}
 
 	return 1;
@@ -1171,6 +2604,8 @@ int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode) {
 
 
 int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount) {
+	assert(loader);
+	assert(buffer);
 
 	int result = gf_Tokenise(loader, buffer, bufferCount);
 	if (!result) {
@@ -1194,26 +2629,32 @@ int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount) {
 }
 
 int gf_LoadFromBuffer(gf_Loader *loader, const char *buffer, gf_u64 bufferCount, gf_LogAllocateFreeFunctions *funcs) {
+	assert(loader);
+	assert(buffer);
+
 	gf_InitLoader(loader, funcs);
 
 	return gf_LoadInternal(loader, buffer, bufferCount);
 }
 
 int gf_LoadFromFile(gf_Loader *loader, const char *filename, gf_LogAllocateFreeFunctions *funcs) {
+	assert(loader);
+	assert(filename);
+
 	gf_InitLoader(loader, funcs);
 
-	char *buffer = gf_AllocateNullTerminatedBufferFromFile(loader, filename);
-	if (!buffer) {
+	gf_u64 bufferCount = 0;
+	loader->fileContentsBuffer = gf_AllocateNullTerminatedBufferFromFile(loader, filename, &bufferCount);
+	if (!loader->fileContentsBuffer) {
 		return 0;
 	}
-	gf_u64 bufferCount = gf_StringLength(buffer) + 1; // +1 for null terminator
 
-	return gf_LoadInternal(loader, buffer, bufferCount);
+	return gf_LoadInternal(loader, loader->fileContentsBuffer, bufferCount);
 }
 
-
-// You can replace this with your own function. All this does is free token and node memory
 void gf_Unload(gf_Loader *loader) {
+	assert(loader);
+
 	gf_Token *token = loader->firstToken;
 	gf_Token *nextToken;
 	while (token) {
@@ -1229,6 +2670,9 @@ void gf_Unload(gf_Loader *loader) {
 		loader->Free(node);
 		node = nextNode;
 	}
+
+	loader->Free(loader->fileContentsBuffer);
+	loader->fileContentsBuffer = NULL;
 }
 
 int gf_LoaderNodeToU32(gf_Loader *loader, gf_LoaderNode *node, gf_u32 *value) {
@@ -1338,7 +2782,7 @@ int gf_LoaderNodeToString(gf_Loader *loader, gf_LoaderNode *node, char *src, gf_
 		return 0;
 	}
 	if (node->token->length >= srcCapacityIncludesNullTerminator) {
-		GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, node->token, "unable to convert token to S64 in gf_LoaderNodeToString");
+		GF_LOG_WITH_TOKEN(loader, GF_LOG_ERROR, node->token, "unable to convert token to string in gf_LoaderNodeToString");
 		return 0;
 	}
 	memcpy(src, node->token->start, node->token->length);
@@ -1349,6 +2793,8 @@ int gf_LoaderNodeToString(gf_Loader *loader, gf_LoaderNode *node, char *src, gf_
 
 
 gf_LoaderNode *gf_GetRoot(gf_Loader *loader) {
+	assert(loader);
+
 	if (!loader->rootNode) {
 		GF_LOG(loader, GF_LOG_WARNING, "loader has no root node");
 		return NULL;
@@ -1357,6 +2803,8 @@ gf_LoaderNode *gf_GetRoot(gf_Loader *loader) {
 }
 
 gf_LoaderNode *gf_GetNext(gf_Loader *loader, gf_LoaderNode *node) {
+	assert(loader);
+
 	if (!node) {
 		GF_LOG(loader, GF_LOG_ERROR, "node is null");
 		return NULL;
@@ -1371,6 +2819,8 @@ gf_LoaderNode *gf_GetNext(gf_Loader *loader, gf_LoaderNode *node) {
 }
 
 gf_LoaderNode *gf_GetChild(gf_Loader *loader, gf_LoaderNode *node) {
+	assert(loader);
+
 	if (!node) {
 		GF_LOG(loader, GF_LOG_ERROR, "node is null");
 		return NULL;
