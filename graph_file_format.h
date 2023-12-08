@@ -11,8 +11,9 @@
 #include <ctype.h>
 #include <math.h>
 #include <assert.h>
-#include <memory.h>
+#include <string.h>
 #include <inttypes.h>
+#include <limits.h>
 
 /*----------------------------------TYPEDEFS----------------------------------------*/
 
