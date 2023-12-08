@@ -1,5 +1,5 @@
 # graph-file-format
-This repo is a header only C program that loads and saves the .gf/.graph file format.
+This repo is a header only, C/C++ program that loads and saves the .gf/.graph file format.
 To get started, download the graph_file_format.h and include it in your C/C++ program. That's it!
 
 Check out example.c for examples of usage. Check out the .graph files to see what the format looks like.
@@ -8,6 +8,8 @@ The graph file format is a plain text, hierarchical, data file format that is tr
 For instance, the parser is only tens of lines long! It's simpler than JSON and as a bonus, can have comments.
 
 If you want to simply serialise and deserialise data this could be an option for you.
+
+It is cross platform.
 
 It was designed primarily for games to save information about game state which is usually hierarchical.
 Credit for the design goes to my Dad
