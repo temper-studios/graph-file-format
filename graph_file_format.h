@@ -1,4 +1,9 @@
 #pragma once
+#ifndef GF_GRAPH_FILE_FORMAT_H
+#define GF_GRAPH_FILE_FORMAT_H
+
+// This header file parses the .gf/.graph file format.
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -9,7 +14,7 @@
 #include <memory.h>
 #include <inttypes.h>
 
-//----------------------------------TYPEDEFS----------------------------------------\\
+/*----------------------------------TYPEDEFS----------------------------------------*/
 
 typedef uint32_t gf_u32;
 typedef uint64_t gf_u64;
@@ -18,9 +23,9 @@ typedef int64_t  gf_s64;
 typedef float    gf_f32;
 typedef double   gf_f64;
 
-//----------------------------------------------------------------------------------\\
+/*----------------------------------------------------------------------------------*/
 
-//-------------------------STRING CONVERSIONS---------------------------------------\\
+/*-------------------------STRING CONVERSIONS---------------------------------------*/
 
 /*
 Name:        int gf_AreStringSpansEqual(const char *a, gf_u64 alength, const char *b, gf_u64 blength);
@@ -105,9 +110,9 @@ Returns:     Returns 1 if the conversion was successful. 0 if it was not success
 */
 int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value);
 
-//-----------------------------------------------------------------------------------\\
+/*-----------------------------------------------------------------------------------*/
 
-//-------------------------------------TOKENS----------------------------------------\\
+/*-------------------------------------TOKENS----------------------------------------*/
 
 typedef enum gf_TokenType {
 	GF_TOKEN_TYPE_ROOT,           // The type exclusively held by the hidden root token of the parser.
@@ -122,13 +127,17 @@ typedef enum gf_TokenType {
 	GF_TOKEN_TYPE_VALUE_ASSIGN    // This token { which designates an assignment is about to happen for a composite token.
 } gf_TokenType;
 
+/*
+Holds information about each token that is created from the tokeniser.
+Tokens are stored as a singly linked list where each token points to the next one.
+*/
 typedef struct gf_Token {
-	const char *start;
-	gf_u64 length;
-	gf_TokenType type;
-	gf_u64 lineno;
-	gf_u64 colno;
-	struct gf_Token *next;
+	const char *start;     // The pointer into the buffer that signifies the start string of the token.
+	gf_u64 length;         // The length of the start string.
+	gf_TokenType type;     // The token type
+	gf_u64 lineno;         // The line number that this token starts on.
+	gf_u64 colno;          // The column number on the current line that this token starts on.
+	struct gf_Token *next; // The next token in the list
 } gf_Token;
 
 /*
@@ -155,10 +164,11 @@ Returns:     The names of the token type as a string. The string is NULL termina
 */
 const char *gf_TokenTypeToString(gf_TokenType type);
 
-//-----------------------------------------------------------------------------------\\
+/*----------------------------------------------------------------------------------*/
 
-//-------------------------LOG AND FUNCTION POINTERS--------------------------\\
+/*-------------------------LOG AND FUNCTION POINTERS--------------------------*/
 
+// Used to specify what kind of "error" you want to log.
 typedef enum gf_LogLevel {
 	GF_LOG_ERROR = 0,
 	GF_LOG_WARNING,
@@ -191,9 +201,9 @@ Description: This is a helper struct that stores function pointers responsible f
 			 are allocated. free() must work on a NULL.
 */
 typedef struct gf_LogAllocateFreeFunctions {
-	gf_LogFunctionPtr Log;
-	gf_AllocatorFunctionPtr Allocate;
-	gf_FreeFunctionPtr Free;
+	gf_LogFunctionPtr Log;            // A pointer to the log function you want to use. If this is NULL gf_DefaultLog() is used
+	gf_AllocatorFunctionPtr Allocate; // A pointer to the allocation function you want to use. If this is NULL malloc() is used.
+	gf_FreeFunctionPtr Free;          // A pointer to the free function you want to use. If this is NULL free() is used.
 } gf_LogAllocateFreeFunctions;
 
 /*
@@ -231,13 +241,14 @@ Returns: Nothing.
 */
 #define GF_LOG_WITH_TOKEN(loaderOrSaver, level, token, ...) gf_Log(loaderOrSaver->Log, level, __LINE__, token, __VA_ARGS__)
 
-//-----------------------------------------------------------------------------------\\
+/*-----------------------------------------------------------------------------------*/
 
-//--------------------------------------SAVER----------------------------------------\\
+/*--------------------------------------SAVER----------------------------------------*/
 
+// A helper function used to save data. Use this to begin "serialisation".
 typedef struct gf_Saver {
-	gf_LogFunctionPtr Log;
-	unsigned int indent;
+	gf_LogFunctionPtr Log; // The function used to log errors.
+	unsigned int indent;   // Tracks the current indent level of your data. Each level of nested data has an indentation.
 } gf_Saver;
 
 /*
@@ -246,13 +257,14 @@ Description: Initialises the gf_Saver. Must be called before using the gf_Saver.
              You can call it again to reset the saver.
              If the logfunction is set to the NULL the default gf_DefaultLog function is used instead.
              logfunction is a function pointer to a logging function of gf_LogFunctionPtr signature.
-             You can use your own here and any time the GF_LOG macros are invoked, your logging function will get called.
 Assumptions: - saver is not NULL.
-             - logfunction can be NULL. If it is the default logging function is used
+             - logfunction can be NULL. If it is, the default logging function is used.
 Returns:     Nothing.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
+}
 */
 void gf_InitSaver(gf_Saver *saver, gf_LogFunctionPtr logfunction);
 
@@ -277,17 +289,19 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *value is not NULL
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-gf_s64 value = 1;
+	gf_s64 value = 1;
 
-gf_SaveVariableS64(&saver, file, "identifier", &value);
+	gf_SaveVariableS64(&saver, file, "identifier", &value);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value);
 
@@ -302,17 +316,19 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *value is not NULL
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-gf_s32 value = 1;
+	gf_s32 value = 1;
 
-gf_SaveVariableS32(&saver, file, "identifier", &value);
+	gf_SaveVariableS32(&saver, file, "identifier", &value);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value);
 
@@ -327,17 +343,19 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *value is not NULL
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-gf_u32 value = 1;
+	gf_u32 value = 1;
 
-gf_SaveVariableU32(&saver, file, "identifier", &value);
+	gf_SaveVariableU32(&saver, file, "identifier", &value);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableU32(gf_Saver *saver, FILE *file, const char *identifier, gf_u32 *value);
 
@@ -352,24 +370,26 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *value is not NULL
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-gf_u64 value = 1;
+	gf_u64 value = 1;
 
-gf_SaveVariableU64(&saver, file, "identifier", &value);
+	gf_SaveVariableU64(&saver, file, "identifier", &value);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value);
 
 /*
 Name:        int gf_SaveVariableString(gf_Saver *saver, FILE *file, const char *identifier, const char *str);
 Description: Saves a string to the file with the given value. This will be in the format "a { "Hello, world" }" 
-             where "a" is the identifier and "Hellow, world" is the string.
+             where "a" is the identifier and "Hello, world" is the string.
 Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *saver is not NULL
              - *file is not NULL and is a valid file.
@@ -377,17 +397,19 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *str is not NULL and is a NULL terminated string.
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-const char *str = "hello, world";
+	const char *str = "hello, world";
 
-gf_SaveVariableString(&saver, file, "identifier", str);
+	gf_SaveVariableString(&saver, file, "identifier", str);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableString(gf_Saver *saver, FILE *file, const char *identifier, const char *str);
 
@@ -402,17 +424,19 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *value is not NULL
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-float value = 1.0;
+	float value = 1.0;
 
-gf_SaveVariableF32(&saver, file, "identifier", &value);
+	gf_SaveVariableF32(&saver, file, "identifier", &value);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableF32(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *value);
 
@@ -427,17 +451,19 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *value is not NULL
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-double value = 1.0;
+	double value = 1.0;
 
-gf_SaveVariableF64(&saver, file, "identifier", &value);
+	gf_SaveVariableF64(&saver, file, "identifier", &value);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableF64(gf_Saver *saver, FILE *file, const char *identifier, gf_f64 *value);
 
@@ -453,17 +479,19 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - if strlen is longer than the NULL terminated string then only the string up to the NULL terminated character is saved.
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-const char *str = "hello, world";
+	const char *str = "hello, world";
 
-gf_SaveVariableStringSpan(&saver, file, "identifier", str, 5);
+	gf_SaveVariableStringSpan(&saver, file, "identifier", str, 5);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableStringSpan(gf_Saver *saver, FILE *file, const char *identifier, const char *str, int strLen);
 
@@ -478,21 +506,24 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - *x, *y and *z are not NULL
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-float x = 1.0f;
-float y = 2.0f;
-float z = 3.0f;
+	float x = 1.0f;
+	float y = 2.0f;
+	float z = 3.0f;
 
-gf_SaveVariableVec3(&saver, file, "identifier", x, y, z);
+	gf_SaveVariableVec3(&saver, file, "identifier", x, y, z);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveVariableVec3(gf_Saver *saver, FILE *file, const char *identifier, gf_f32 *x, gf_f32 *y, gf_f32 *z);
+
 /*
 Name:        int gf_SaveArrayU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value, int count);
 Description: Saves an array to the file. This will be in the format "a { 1, 2, ... }" 
@@ -505,16 +536,18 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - value is atleast of length count.
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-gf_u64 value[] = { 1, 2 };
-gf_SaveArrayU64(&saver, file, "identifier", value, 2);
+	gf_u64 value[] = { 1, 2 };
+	gf_SaveArrayU64(&saver, file, "identifier", value, 2);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveArrayU64(gf_Saver *saver, FILE *file, const char *identifier, gf_u64 *value, int count);
 
@@ -530,16 +563,18 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - value is atleast of length count.
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-gf_s64 value[] = { 1, 2 };
-gf_SaveArrayS64(&saver, file, "identifier", value, 2);
+	gf_s64 value[] = { 1, 2 };
+	gf_SaveArrayS64(&saver, file, "identifier", value, 2);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveArrayS64(gf_Saver *saver, FILE *file, const char *identifier, gf_s64 *value, int count);
 
@@ -555,16 +590,18 @@ Assumptions: - gf_InitSaver must have been called on saver atleast once.
              - value is atleast of length count.
 Returns:     1 if it was successful. 0 if not. If an error occurs this is logged.
 Examples:
-gf_Saver saver;
-gf_SaveInit(&saver, NULL);
+{
+	gf_Saver saver;
+	gf_SaveInit(&saver, NULL);
 
-FILE *file = fopen(file, "myfile", "rb");
-if (!file) return 0;
+	FILE *file = fopen(file, "myfile", "rb");
+	if (!file) return 0;
 
-gf_u32 value[] = { 1, 2 };
-gf_SaveArrayS32(&saver, file, "identifier", value, 2);
+	gf_u32 value[] = { 1, 2 };
+	gf_SaveArrayS32(&saver, file, "identifier", value, 2);
 
-fclose(file);
+	fclose(file);
+}
 */
 int gf_SaveArrayS32(gf_Saver *saver, FILE *file, const char *identifier, gf_s32 *value, int count);
 
@@ -629,16 +666,21 @@ Examples:
 */
 int gf_SaveEndList(gf_Saver *saver, FILE *file);
 
-//-----------------------------------------------------------------------------------\\
+/*-----------------------------------------------------------------------------------*/
 
-//------------------------------------LOADER-----------------------------------------\\
+/*------------------------------------LOADER-----------------------------------------*/
 
+/*
+Stores a pointer to a buffer that you want to tokeniser. Tracks the current index 
+into this buffer as you tokenise. Also tracks things like the current line number and 
+column number.
+*/
 typedef struct gf_Tokeniser {
-	const char *buffer;
-	gf_u64 index;
-	gf_u64 count;
-	gf_u64 lineno;
-	gf_u64 colno;
+	const char *buffer; // A pointer to a null terminated buffer that needs to be tokenised
+	gf_u64 index;       // The internal tracking index that records the current character in the buffer
+	gf_u64 count;       // The total size of the buffer.
+	gf_u64 lineno;      // The current line number.
+	gf_u64 colno;       // The current column number.
 } gf_Tokeniser;
 
 /*
@@ -654,6 +696,7 @@ Assumptions: - *tokeniser is not NULL
 Returns:     Nothing.
 */
 void gf_InitTokeniser(gf_Tokeniser *tokeniser, const char *buffer, gf_u64 count);
+
 /*
 Name:        char gf_GetChar(gf_Tokeniser *tokeniser);
 Description: Get the character at the tokenisers internal current index, from the buffer pointed to by the tokeniser.
@@ -664,6 +707,7 @@ Assumptions: - tokeniser has been initialised with a call to gf_InitTokeniser();
 Returns:     Returns the character of the buffer pointed to by the tokeniser, at the tracked index. Returns a NULL terminator if the end of this buffer is reached.
 */
 char gf_GetChar(gf_Tokeniser *tokeniser);
+
 /*
 Name:        void gf_IncrementIndex(gf_Tokeniser *tokeniser);
 Description: Increments the internal tracking index of the tokeniser. If the end of the buffer tracked
@@ -673,6 +717,7 @@ Assumptions: - tokeniser has been initialised with a call to gf_InitTokeniser();
 Returns:     Nothing.
 */
 void gf_IncrementIndex(gf_Tokeniser *tokeniser);
+
 /*
 Name:        void gf_IncrementLineNo(gf_Tokeniser *tokeniser);
 Description: Increments the current line number that is being tracked by the tokeniser.
@@ -681,6 +726,7 @@ Assumptions: - tokeniser has been initialised with a call to gf_InitTokeniser();
 Returns:     Nothing.
 */
 void gf_IncrementLineNo(gf_Tokeniser *tokeniser);
+
 /*
 Name:        const char *gf_Ptr(gf_Tokeniser *tokeniser);
 Description: Returns a pointer into the buffer pointed to by the tokeniser at the internal tokeniser index.
@@ -692,32 +738,43 @@ Returns:     A pointer into the buffer that the tokeniser points to at the locat
 */
 const char *gf_Ptr(gf_Tokeniser *tokeniser);
 
+/*
+A node that is stored as a graph that represents parsed text.
+A node has an associated token. When the text forms a list these 
+nodes are stored as a doubly linked list where they are next to each other.
+When data is nested, nodes will be stored as children of other nodes.
+*/
 typedef struct gf_LoaderNode {
-	gf_Token *token;
-	struct gf_LoaderNode *parent;
-	struct gf_LoaderNode *next;
-	struct gf_LoaderNode *prev;
-	struct gf_LoaderNode *childrenHead;
-	struct gf_LoaderNode *childrenTail;
-	struct gf_LoaderNode *nextAllocated;
+	gf_Token *token;                     // The token associated with this list
+	struct gf_LoaderNode *parent;        // The parent of this node. This will only ever be NULL for the root token.
+	struct gf_LoaderNode *next;          // The next node in the list.
+	struct gf_LoaderNode *prev;          // The prev node in the list
+	struct gf_LoaderNode *childrenHead;  // The head of the children list of this node
+	struct gf_LoaderNode *childrenTail;  // The tail of the children list of this node.
+	struct gf_LoaderNode *nextAllocated; // A helper linked list that tracks allocated nodes.
 } gf_LoaderNode;
 
+/*
+A helper function that is responsible for storing all tokens, nodes and potentially a buffer that
+was allocated when opening a file.
+*/
 typedef struct gf_Loader {
-	gf_LogFunctionPtr Log;
-	gf_AllocatorFunctionPtr Allocate;
-	gf_FreeFunctionPtr Free;
-	gf_Token rootToken;
-	gf_Token *lastToken;
-	gf_Token *firstToken;
-	gf_Token *curToken;
-	gf_LoaderNode *rootNode;
-	gf_LoaderNode *lastNode;
-	char *fileContentsBuffer;
+	gf_LogFunctionPtr Log;            // The function used to log. 
+	gf_AllocatorFunctionPtr Allocate; // The function used to allocate. 
+	gf_FreeFunctionPtr Free;          // The function used to free
+	gf_Token rootToken;               // The root token that is always guaranteed to exist when parsing text.
+	gf_Token *lastToken;              // The last token in the token list.
+	gf_Token *firstToken;             // The first token in the token list.
+	gf_Token *curToken;               // The current token in the token list.
+	gf_LoaderNode *rootNode;          // The root node in the node graph.
+	gf_LoaderNode *lastNode;          // The last allocated node in the node graph.
+	char *fileContentsBuffer;         // A pointer that points to memory allocated from a file.
+	gf_u64 nestLevel;                 // When parsing, tracks how many {} we are nested in.
 } gf_Loader;
 
 /*
 Name:        void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctions);
-Description: Initialises the loader. This is called internally when calling one of gf_Load...() functions. Do not call again until gf_Unload is called.
+Description: Initialises the loader. This is called internally when calling one of the gf_Load...() functions. Do not call again until gf_Unload is called.
              Ideally don't call at all and just call one of the load function instead to begin using the loader.
 	         The loader is initialised with a log, allocate and 
              free function pointer data structure. If this is NULL, the default logging function, malloc() and free() are used respectively.
@@ -734,12 +791,13 @@ Name:        void gf_IncrementLastTokenLength(gf_Loader *loader);
 Description: Increments the length of the last allocated token by loader.
 Assumptions: - gf_InitLoader() has been called on *loader.
              - gf_LoadInternal() has been called. i.e. some data has been loaded.
+			 - *loader is not NULL.
 Returns:     Nothing.
 */
 void gf_IncrementLastTokenLength(gf_Loader *loader);
 
 /*
-Name:        int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno);
+Name:        int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno, gf_u64 colno);
 Description: Allocates a new token used by the loader. The user specified allocator is used when the loader is 
              initialised. The token is given the specified type and lineno along with the start string within the loaded
 			 buffer. It starts with a length of 1.
@@ -749,19 +807,22 @@ Assumptions: - gf_InitLoader() has been called on *loader.
 			 - *start is not NULL
 Returns:     Returns 1 if it succeeds. 0 if it fails. The error is logged.
 */
-int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno);
+int gf_AddToken(gf_Loader *loader, const char *start, gf_TokenType type, gf_u64 lineno, gf_u64 colno);
 
 /*
-Name:        char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename);
+Name:        char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename, gf_u64 *bufferCountWithNullTerminator);
 Description: Opens the given file. Allocates it's contents using loader's defined allocator (+1 to include the null terminator).
+             Then closes the file.
 			 This allocated buffer is returned as a NULL terminated string.
+			 The size of the allocated buffer is stored in bufferCountWithNullTerminator.
 Assumptions: - gf_InitLoader() has been called on *loader.
 			 - *loader is not NULL
 			 - *filename is NOT NULL
+			 - bufferCountWithNullTerminator is not NULL.
 Returns:     Returns a terminated string that holds the entire contents of the file +1 for the NULL terminator. 
              Returns NULL if this failed and the error is logged.
 */
-char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename);
+char *gf_AllocateNullTerminatedBufferFromFile(gf_Loader *loader, const char *filename, gf_u64 *bufferCountWithNullTerminator);
 
 /*
 Name:        int gf_TokeniseInternal(gf_Loader *loader, gf_Tokeniser *tokeniser);
@@ -1531,13 +1592,24 @@ Examples:
 */
 int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u64 count);
 
+/*-----------------------------------------------------------------------------------*/
 
-//-----------------------------------------------------------------------------------\\
+/*-------------------------TESTING---------------------------------------------------*/
+
+#ifdef GF_IMPLEMENTATION_WITH_TESTS
+
+#define GF_TEST_ASSERT(arg, str) if (!(arg)) { printf("[%s]: test failed! Check logs for more.", str); return 0; }
+
+int gf_Test(void);
+
+#endif
+
+/*-----------------------------------------------------------------------------------*/
 
 // IMPLEMENTATION
-#ifdef GF_IMPLEMENTATION
+#if defined(GF_IMPLEMENTATION) || defined(GF_IMPLEMENTATION_WITH_TESTS)
 
-//-------------------------STRING CONVERSIONS---------------------------------------\\
+/*-------------------------STRING CONVERSIONS---------------------------------------*/
 
 int gf_AreStringSpansEqual(const char *a, gf_u64 alength, const char *b, gf_u64 blength) {
 	assert(a);
@@ -1616,7 +1688,7 @@ int gf_StringSpanToS32(const char *start, uint64_t length, gf_s32 *value) {
 	assert(start);
 
 	gf_s32 i = strtol(start, NULL, 10);
-	// 0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
+	// 0 could mean a failure
 	if (i == 0) {
 		uint64_t index = 0;
 		while (!isdigit(start[index]) && index < length) {
@@ -1637,7 +1709,7 @@ int gf_StringSpanToS64(const char *start, uint64_t length, gf_s64 *value) {
 	assert(start);
 
 	gf_s64 i = strtoll(start, NULL, 10);
-	// 0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
+	// 0 could mean a failure, or it could just mean the string is actually 0.
 	if (i == 0) {
 		uint64_t index = 0;
 		while (!isdigit(start[index]) && index < length) {
@@ -1658,7 +1730,7 @@ int gf_StringSpanToF64(const char *start, uint64_t length, gf_f64 *value) {
 	assert(start);
 
 	double d = strtod(start, NULL);
-	// 0.0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
+	// 0.0 could mean a failure, or it could just mean the string is actually 0.
 	if (d == 0.0) {
 		uint64_t index = 0;
 		while (!isdigit(start[index]) && index < length) {
@@ -1679,7 +1751,7 @@ int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value) {
 	assert(start);
 
 	float f = strtof(start, NULL);
-	// 0.0 could mean a failure, or it could just mean the string is actually 0. some fantastic api design there
+	// 0.0 could mean a failure, or it could just mean the string is actually 0
 	if (f == 0.0) {
 		uint64_t index = 0;
 		while (!isdigit(start[index]) && index < length) {
@@ -1696,9 +1768,9 @@ int gf_StringSpanToF32(const char *start, uint64_t length, gf_f32 *value) {
 	return 1;
 }
 
-//-----------------------------------------------------------------------------------\\
+/*-----------------------------------------------------------------------------------*/
 
-//-------------------------------------TOKENS----------------------------------------\\
+/*-------------------------------------TOKENS----------------------------------------*/
 
 void gf_PrintToken(gf_Token *token) {
 	assert(token);
@@ -1731,9 +1803,9 @@ const char *gf_TokenTypeToString(gf_TokenType type) {
 	}
 }
 
-//-----------------------------------------------------------------------------------\\
+/*-----------------------------------------------------------------------------------*/
 
-//-------------------------------------LOGGING----------------------------------------\\
+/*-------------------------------------LOGGING----------------------------------------*/
 
 void gf_DefaultLog(gf_LogLevel level, int lineno, gf_Token *token, const char *format, va_list vlist) {
 	switch (level) {
@@ -1760,9 +1832,9 @@ void gf_Log(gf_LogFunctionPtr Log, gf_LogLevel level, int lineno, gf_Token *toke
 	va_end(args);
 };
 
-//-----------------------------------------------------------------------------------\\
+/*-----------------------------------------------------------------------------------*/
 
-//-------------------------------------SAVER----------------------------------------\\
+/*-------------------------------------SAVER----------------------------------------*/
 
 void gf_InitSaver(gf_Saver *saver, gf_LogFunctionPtr logfunction) {
 	assert(saver);
@@ -2118,9 +2190,9 @@ int gf_SaveEndList(gf_Saver *saver, FILE *file) {
 	return 1;
 }
 
-//-----------------------------------------------------------------------------------\\
+/*-----------------------------------------------------------------------------------*/
 
-//-------------------------------------LOADER----------------------------------------\\
+/*-------------------------------------LOADER----------------------------------------*/
 
 void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctions) {
 	assert(loader);
@@ -2159,6 +2231,7 @@ void gf_InitLoader(gf_Loader *loader, gf_LogAllocateFreeFunctions *helperfunctio
 	loader->lastToken = &loader->rootToken;
 
 	loader->fileContentsBuffer = NULL;
+	loader->nestLevel = 0;
 }
 
 void gf_IncrementLastTokenLength(gf_Loader *loader) {
@@ -2560,10 +2633,9 @@ int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode) {
 				}
 
 				gf_AddChild(parentNode, node);
-
-				// skip over the value assign token
 				gf_ConsumeToken(loader);
 
+				loader->nestLevel++;
 				result = gf_Parse(loader, node);
 				if (!result) {
 					return 0;
@@ -2588,6 +2660,7 @@ int gf_Parse(gf_Loader *loader, gf_LoaderNode *parentNode) {
 			gf_AddChild(parentNode, node);
 		}
 		else if (token->type == GF_TOKEN_TYPE_CURLY_CLOSE) {
+			loader->nestLevel--;
 			break;
 		}
 		else if (token->type == GF_TOKEN_TYPE_END_FILE) {
@@ -2619,7 +2692,14 @@ int gf_LoadInternal(gf_Loader *loader, const char *buffer, gf_u64 bufferCount) {
 	}
 	loader->curToken = &loader->rootToken;
 
+	loader->nestLevel = 0;
 	result = gf_Parse(loader, loader->rootNode);
+
+	if (loader->nestLevel != 0) {
+		GF_LOG(loader, GF_LOG_ERROR, "There is a missing closing brace }. A brace has been opened { without a matching close.");
+		result = 0;
+	}
+
 	if (!result) {
 		GF_LOG(loader, GF_LOG_ERROR, "Failed to parse");
 		return 0;
@@ -3053,5 +3133,171 @@ int gf_LoadArrayS32(gf_Loader *loader, gf_LoaderNode *node, gf_s32 *value, gf_u6
 
 	return 1;
 }
+
+/*-----------------------------------------------------------------------------------*/
+
+#endif
+
+#ifdef GF_IMPLEMENTATION_WITH_TESTS
+
+/*-------------------------------------TESTS-----------------------------------------*/
+
+int gf_Test(void) {
+
+	{
+		const char *str = "a {";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "{{{{{{{{{{{{{}}";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "{{{{{{{{{{{{{a}}}}}}}}}}}}}";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "   ";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "/* this is a comment */";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "3.0 { a }";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "{ a, b, c, d }";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "a, b, c, d";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
+	{
+		gf_Loader loader;
+		static char src[1 << 20];
+		memset(src, '-', sizeof(src) - 1);
+		int result = gf_LoadFromBuffer(&loader, src, sizeof(src) - 1, 0);
+		GF_TEST_ASSERT(result == 0, "big test");
+		gf_Unload(&loader);
+	}
+
+	{
+		const char *str = "a b c d e ";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "a /*";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "a \"";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "1, 1.0";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+
+		gf_LoaderNode *root = gf_GetRoot(&loader);
+		gf_LoaderNode *intNode = gf_GetChild(&loader, root);
+		GF_TEST_ASSERT(intNode, str);
+		GF_TEST_ASSERT(gf_GetType(&loader, intNode) == GF_TOKEN_TYPE_INTEGER, str);
+		gf_LoaderNode *floatNode = gf_GetNext(&loader, intNode);
+		GF_TEST_ASSERT(floatNode, str);
+		GF_TEST_ASSERT(gf_GetType(&loader, floatNode) == GF_TOKEN_TYPE_FLOAT, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str =
+			"MyStruct {\n"
+			"  a { 3.14000 }\n"
+			"  b { 101 }\n"
+			"  c { -13 }\n"
+			"  str { \"hello\" }\n"
+			"}\n";
+
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str =
+			"1.0\n"
+			"2.0\n"
+			"Hello\n";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "/* this is a comment */";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str =
+			"MyStruct {\n"
+			"  a { 3.14000 }\n"
+			"  b { *$3dnNONSENSE }\n"
+			"  c { -13 }\n"
+			"  str { \"hello\" }\n"
+			"}\n";
+
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+
+	puts("All tests passed!");
+
+	return 1;
+}
+
+/*-----------------------------------------------------------------------------------*/
+
+#endif
 
 #endif
