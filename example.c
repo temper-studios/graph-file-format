@@ -3,6 +3,7 @@
 
 int main(void) {
 
+	// Declare some suitably complicated data we can save and load.
 	struct InnerStruct {
 		double a;
 		int64_t b;
@@ -19,6 +20,7 @@ int main(void) {
 	};
 
 	{
+		// Initialise our structure for saving.
 		struct MyStruct myStruct;
 		myStruct.a = 10;
 		myStruct.b = 3.14f;
@@ -38,15 +40,18 @@ int main(void) {
 		myStruct.inner.list[2] = 2;
 		myStruct.inner.list[3] = 3;
 
+		// We use a gf_Saver to save .gf files.
 		gf_Saver saver;
 		gf_InitSaver(&saver, NULL);
 
+		// Open the file ourselves.
 		FILE *file = fopen("data.gf", "wb");
 		if (!file) {
 			puts("could not open file");
 			return 0;
 		}
 
+		// A list contains lists or other data like integers, float and strings.
 		gf_SaveStartList(&saver, file, "MyStruct");
 		{
 			gf_SaveVariableU32(&saver, file, "a", &myStruct.a);
@@ -155,22 +160,44 @@ int main(void) {
 
 	}
 	
-	//{
-	//	gf_Loader loader;
-	//	char src[1] = "/";
-	//	gf_LoadFromBuffer(&loader, src, 1, 0);
-	//	gf_Unload(&loader);
-	//}
 
+// Tests
+
+#define GF_TEST_ASSERT(arg, str) if (!arg) { printf("[%s]: test failed! Check logs for more.", str); return 0; }
+	{
+		const char *str = "   ";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "3.0 { a }";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "{ a, b, c, d }";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 0, str);
+		gf_Unload(&loader);
+	}
+	{
+		const char *str = "a, b, c, d";
+		gf_Loader loader;
+		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+		GF_TEST_ASSERT(result == 1, str);
+		gf_Unload(&loader);
+	}
 	{
 		gf_Loader loader;
 		static char src[1 << 20];
 		memset(src, '-', sizeof(src) - 1);
 		int result = gf_LoadFromBuffer(&loader, src, sizeof(src) - 1, 0);
-		if (result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 0, "big test");
 		gf_Unload(&loader);
 	}
 
@@ -178,43 +205,38 @@ int main(void) {
 		const char *str = "a b c d e ";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (!result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 1, str);
 		gf_Unload(&loader);
 	}
 	{
 		const char *str = "a /*";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 0, str);
 		gf_Unload(&loader);
 	}
 	{
 		const char *str = "a \"";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 0, str);
 		gf_Unload(&loader);
 	}
 	{
 		const char *str = "1, 1.0";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (!result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 1, str);
+
+		gf_LoaderNode *root = gf_GetRoot(&loader);
+		gf_LoaderNode *intNode = gf_GetChild(&loader, root);
+		GF_TEST_ASSERT(intNode, str);
+		GF_TEST_ASSERT(gf_GetType(&loader, intNode) == GF_TOKEN_TYPE_INTEGER, str);
+		gf_LoaderNode *floatNode = gf_GetNext(&loader, intNode);
+		GF_TEST_ASSERT(floatNode, str);
+		GF_TEST_ASSERT(gf_GetType(&loader, floatNode) == GF_TOKEN_TYPE_FLOAT, str);
 		gf_Unload(&loader);
 	}
-
 	{
 		const char *str =
 			"MyStruct {\n"
@@ -226,13 +248,9 @@ int main(void) {
 
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (!result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 1, str);
 		gf_Unload(&loader);
 	}
-
 	{
 		const char *str =
 			"1.0\n"
@@ -240,33 +258,32 @@ int main(void) {
 			"Hello\n";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (!result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 1, str);
 		gf_Unload(&loader);
 	}
 	{
 		const char *str = "/* this is a comment */";
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (!result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 1, str);
 		gf_Unload(&loader);
 	}
 	{
-		// Should this fail? this is the question of the day.
-		const char *str = "3.0 { a }";
+		const char *str =
+			"MyStruct {\n"
+			"  a { 3.14000 }\n"
+			"  b { *$3dnNONSENSE }\n"
+			"  c { -13 }\n"
+			"  str { \"hello\" }\n"
+			"}\n";
+
 		gf_Loader loader;
 		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		if (!result) {
-			puts("test failed");
-			return 0;
-		}
+		GF_TEST_ASSERT(result == 0, str);
 		gf_Unload(&loader);
 	}
+	
+	puts("All tests passed!");
 
 	return 1;
 }
