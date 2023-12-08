@@ -1,9 +1,15 @@
-#define GF_IMPLEMENTATION
+// Include the graph file format header.
+// If you want to include the implementation (which should be included in exactly one translation unit of your project)
+// you precede the include with either GF_IMPLEMENTATION or GF_IMPLEMENTATION_WITH_TESTS
+// The latter includes the tests the former does not.
+#define GF_IMPLEMENTATION_WITH_TESTS
 #include "graph_file_format.h"
 
 int main(void) {
 
-	// Declare some suitably complicated data we can save and load.
+	// As an example, lets include some semi-realistic data that we might 
+	// want to save or load.
+
 	struct InnerStruct {
 		double a;
 		int64_t b;
@@ -40,57 +46,80 @@ int main(void) {
 		myStruct.inner.list[2] = 2;
 		myStruct.inner.list[3] = 3;
 
-		// We use a gf_Saver to save .gf files.
+		// When we want to save we use the gf_Saver object.
+		// Before we use this, we must call gf_InitSaver().
 		gf_Saver saver;
 		gf_InitSaver(&saver, NULL);
 
-		// Open the file ourselves.
+		// To save, we need a stream to save to. Let's open the file ourselves.
 		FILE *file = fopen("data.gf", "wb");
 		if (!file) {
 			puts("could not open file");
 			return 0;
 		}
 
-		// A list contains lists or other data like integers, float and strings.
+		// The saver is very simple and is just a helper that writes  to the file.
+		// For ease, we want to match the structure of our existing data. Our struct 
+		// has various levels of nesting. We can start a nested list by calling gf_SaveStartList.
+		// This writes a identifier and an opening brace { to the file.
 		gf_SaveStartList(&saver, file, "MyStruct");
 		{
+			// Now we can save variables to the file. We want to one to one match our struct because 
+			// it is just easier to deal with that way. Each of these variable files saves the data
+			// along with an identifier that we specify. Like so => a { 2 } or b { 3.2 }.
 			gf_SaveVariableU32(&saver, file, "a", &myStruct.a);
 			gf_SaveVariableF32(&saver, file, "b", &myStruct.b);
 			gf_SaveVariableVec3(&saver, file, "xyz", &myStruct.xyz[0], &myStruct.xyz[1], &myStruct.xyz[2]);
 
+			// Since Inner is nested inside MyStruct, we want to start a new nested list.
 			gf_SaveStartList(&saver, file, "Inner");
 			{
 				gf_SaveVariableF64(&saver, file, "a", &myStruct.inner.a);
 				gf_SaveVariableS64(&saver, file, "b", &myStruct.inner.b);
 				gf_SaveArrayS32(&saver, file, "list", myStruct.inner.list, 4);
 			}
+			// Make sure to match a start list with an end list otherwise you get a malformed file!
 			gf_SaveEndList(&saver, file);
 
 			gf_SaveVariableString(&saver, file, "str", myStruct.str);
 			gf_SaveVariableU64(&saver, file, "c", &myStruct.c);
 
 		}
+		// Make sure to match a start list with an end list otherwise you get a malformed file!
 		gf_SaveEndList(&saver, file);
 
+		// Close the file at the end and we are done!
 		fclose(file);
 	}
 
-
 	{
+		// Loading is slightly more involved.
 		struct MyStruct myStruct;
+
+		// We can use the gf_Loader object to help us load text.
 		gf_Loader loader;
 		int result = 0;
 
+		// We can load directly from a file. This allocates an internal buffer that stores the file.
+		// This acts as an initialisation for the loader. We don't have to initialise loader ourselves.
+		// When you have called a load function on loader, you must match it with gf_Unload(), even if it fails.
 		result = gf_LoadFromFile(&loader, "data.gf", NULL);
-		if (!result) {return 0; }
+		if (!result) {return 0;}
 		{
+			// Text is tokenised and parsed into a graph like structure. The graph is made of loader nodes.
+			// These can be traversed and converted to values. 
+			// When loaded, there is an intrinsic root node that always exists that we can start with.
 			gf_LoaderNode *root = gf_GetRoot(&loader);
 
+			// All parsed data in the text is a subtree of the root. The order of the text is maintained in parsing, so
+			// we can expect the first child of the intrinsic root to be the MyStruct { identifier we saved previously.
 			gf_LoaderNode *nodeMyStruct = gf_GetChild(&loader, root);
 			{
+				// Our MyStruct nodes contains a list of children.
 				gf_LoaderNode *child = gf_GetChild(&loader, nodeMyStruct);
 				gf_LoadVariableU32(&loader, child, &myStruct.a);
 
+				// We get the next child in the the MyStruct child list.
 				child = gf_GetNext(&loader, child);
 				gf_LoadVariableF32(&loader, child, &myStruct.b);
 
@@ -117,6 +146,7 @@ int main(void) {
 			}
 
 		}
+		// You must call this when loading data into loader.
 		gf_Unload(&loader);
 	}
 
@@ -127,6 +157,7 @@ int main(void) {
 		{
 			gf_LoaderNode *root = gf_GetRoot(&loader);
 
+			// This is a different API which instead searches for identifier nodes by name.
 			gf_LoaderNode *nodeMyStruct = gf_FindFirstChild(&loader, root, "MyStruct");
 
 			gf_LoaderNode *nodeA = gf_FindFirstChild(&loader, nodeMyStruct, "a");
@@ -159,131 +190,19 @@ int main(void) {
 		gf_Unload(&loader);
 
 	}
+
+	// We can also load directly from a buffer
+	const char *str =
+		"MyStruct {\n"
+		"  a { 3.14000 }\n"
+		"  b { 101 }\n"
+		"  c { -13 }\n"
+		"  str { \"hello\" }\n"
+		"}\n";
+
+	gf_Loader loader;
+	gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
+	gf_Unload(&loader);
 	
-
-// Tests
-
-#define GF_TEST_ASSERT(arg, str) if (!arg) { printf("[%s]: test failed! Check logs for more.", str); return 0; }
-	{
-		const char *str = "   ";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 0, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str = "3.0 { a }";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 0, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str = "{ a, b, c, d }";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 0, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str = "a, b, c, d";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 1, str);
-		gf_Unload(&loader);
-	}
-	{
-		gf_Loader loader;
-		static char src[1 << 20];
-		memset(src, '-', sizeof(src) - 1);
-		int result = gf_LoadFromBuffer(&loader, src, sizeof(src) - 1, 0);
-		GF_TEST_ASSERT(result == 0, "big test");
-		gf_Unload(&loader);
-	}
-
-	{
-		const char *str = "a b c d e ";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 1, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str = "a /*";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 0, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str = "a \"";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 0, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str = "1, 1.0";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 1, str);
-
-		gf_LoaderNode *root = gf_GetRoot(&loader);
-		gf_LoaderNode *intNode = gf_GetChild(&loader, root);
-		GF_TEST_ASSERT(intNode, str);
-		GF_TEST_ASSERT(gf_GetType(&loader, intNode) == GF_TOKEN_TYPE_INTEGER, str);
-		gf_LoaderNode *floatNode = gf_GetNext(&loader, intNode);
-		GF_TEST_ASSERT(floatNode, str);
-		GF_TEST_ASSERT(gf_GetType(&loader, floatNode) == GF_TOKEN_TYPE_FLOAT, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str =
-			"MyStruct {\n"
-			"  a { 3.14000 }\n"
-			"  b { 101 }\n"
-			"  c { -13 }\n"
-			"  str { \"hello\" }\n"
-			"}\n";
-
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 1, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str =
-			"1.0\n"
-			"2.0\n"
-			"Hello\n";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 1, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str = "/* this is a comment */";
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 1, str);
-		gf_Unload(&loader);
-	}
-	{
-		const char *str =
-			"MyStruct {\n"
-			"  a { 3.14000 }\n"
-			"  b { *$3dnNONSENSE }\n"
-			"  c { -13 }\n"
-			"  str { \"hello\" }\n"
-			"}\n";
-
-		gf_Loader loader;
-		int result = gf_LoadFromBuffer(&loader, str, gf_StringLength(str), NULL);
-		GF_TEST_ASSERT(result == 0, str);
-		gf_Unload(&loader);
-	}
-	
-	puts("All tests passed!");
-
-	return 1;
+	return gf_Test();
 }
