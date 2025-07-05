@@ -104,7 +104,7 @@ int main(void) {
 		// This acts as an initialisation for the loader. We don't have to initialise loader ourselves.
 		// When you have called a load function on loader, you must match it with gf_Unload(), even if it fails.
 		result = gf_LoadFromFile(&loader, "data.gf", NULL);
-		if (!result) {return 0;}
+		if (!result) { gf_Unload(&loader); return 0;}
 		{
 			// Text is tokenised and parsed into a graph like structure. The graph is made of loader nodes.
 			// These can be traversed and converted to values. 
